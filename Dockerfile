@@ -45,6 +45,6 @@ FROM base
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/rideboard-rewrite .
+COPY --from=builder /app/target/release/rideboard-v2 .
 
-CMD ["./rideboard-rewrite"]
+CMD ["./rideboard-v2"]
