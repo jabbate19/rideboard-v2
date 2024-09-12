@@ -1,9 +1,15 @@
-use actix_web::{get, post, put, delete, web::{self}, HttpResponse, Responder, Scope};
-use serde::{Deserialize, Serialize};
+use actix_web::{
+    delete, get, post, put,
+    web::{self},
+    HttpResponse, Responder, Scope,
+};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
 use crate::AppState;
+
+mod rider;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct Car {
@@ -12,7 +18,7 @@ pub struct Car {
     pub driver: String,
     pub max_capacity: i32,
     pub departure_time: DateTime<Utc>,
-    pub return_time: DateTime<Utc>
+    pub return_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize)]
@@ -20,7 +26,7 @@ pub struct CreateCar {
     pub driver: String,
     pub max_capacity: i32,
     pub departure_time: DateTime<Utc>,
-    pub return_time: DateTime<Utc>
+    pub return_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize)]
@@ -28,11 +34,15 @@ struct UpdateCar {
     pub driver: Option<String>,
     pub max_capacity: Option<i32>,
     pub departure_time: Option<DateTime<Utc>>,
-    pub return_time: Option<DateTime<Utc>>
+    pub return_time: Option<DateTime<Utc>>,
 }
 
 #[post("/")]
-async fn create_car(data: web::Data<AppState>, car: web::Json<CreateCar>, path: web::Path<i32>) -> impl Responder {
+async fn create_car(
+    data: web::Data<AppState>,
+    car: web::Json<CreateCar>,
+    path: web::Path<i32>,
+) -> impl Responder {
     let event_id: i32 = path.into_inner();
     let result = sqlx::query!(
         r#"
@@ -44,9 +54,7 @@ async fn create_car(data: web::Data<AppState>, car: web::Json<CreateCar>, path: 
     .await;
 
     match result {
-        Ok(record) => {
-            HttpResponse::Ok().json(record.id)
-        },
+        Ok(record) => HttpResponse::Ok().json(record.id),
         Err(_) => HttpResponse::InternalServerError().body("Failed to create car"),
     }
 }
@@ -57,7 +65,8 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
     let result: Option<Car> = query_as!(
         Car,
         r#"SELECT * FROM car WHERE event_id = $1 AND id = $2"#,
-        event_id, car_id
+        event_id,
+        car_id
     )
     .fetch_optional(&data.db)
     .await
@@ -72,13 +81,9 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
 #[get("/")]
 async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
     let event_id: i32 = path.into_inner();
-    let result = query_as!(
-        Car,
-        r#"SELECT * FROM car WHERE event_id = $1"#,
-        event_id
-    )
-    .fetch_all(&data.db)
-    .await;
+    let result = query_as!(Car, r#"SELECT * FROM car WHERE event_id = $1"#, event_id)
+        .fetch_all(&data.db)
+        .await;
 
     match result {
         Ok(events) => HttpResponse::Ok().json(events),
@@ -87,7 +92,7 @@ async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
 }
 
 #[put("/{car_id}")]
-async fn update_event(
+async fn update_car(
     data: web::Data<AppState>,
     path: web::Path<(i32, i32)>,
     car: web::Json<UpdateCar>,
@@ -103,7 +108,12 @@ async fn update_event(
         return_time = COALESCE($4, return_time)
         WHERE event_id = $5 AND id = $6 RETURNING id
         "#,
-        car.driver, car.max_capacity, car.departure_time, car.return_time, event_id, car_id
+        car.driver,
+        car.max_capacity,
+        car.departure_time,
+        car.return_time,
+        event_id,
+        car_id
     )
     .fetch_optional(&data.db)
     .await;
@@ -111,25 +121,35 @@ async fn update_event(
     match updated {
         Ok(Some(_)) => HttpResponse::Ok().body("Car updated successfully"),
         Ok(None) => HttpResponse::NotFound().body("Car not found"),
-        Err(_) => HttpResponse::InternalServerError().body("Car to update event"),
+        Err(_) => HttpResponse::InternalServerError().body("Failed to update car"),
     }
 }
 
 #[delete("/{car_id}")]
-async fn delete_event(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl Responder {
+async fn delete_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
 
-    let deleted = sqlx::query!("DELETE FROM car WHERE event_id = $1 AND id = $2 RETURNING id", event_id, car_id)
-        .fetch_optional(&data.db)
-        .await;
+    let deleted = sqlx::query!(
+        "DELETE FROM car WHERE event_id = $1 AND id = $2 RETURNING id",
+        event_id,
+        car_id
+    )
+    .fetch_optional(&data.db)
+    .await;
 
     match deleted {
         Ok(Some(_)) => HttpResponse::Ok().body("Car deleted"),
         Ok(None) => HttpResponse::NotFound().body("Car not found"),
-        Err(_) => HttpResponse::InternalServerError().body("Car to delete user"),
+        Err(_) => HttpResponse::InternalServerError().body("Failed to delete car"),
     }
 }
 
 pub fn scope() -> Scope {
-    web::scope("/event/{event_id}/car")
+    web::scope("/{event_id}/car")
+        .service(create_car)
+        .service(get_car)
+        .service(get_all_cars)
+        .service(update_car)
+        .service(delete_car)
+        .service(rider::scope())
 }

@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware::Logger};
+use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer, Responder};
 use include_dir::{include_dir, Dir};
 use log::info;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -39,23 +39,31 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
     dotenv::dotenv().ok();
 
+    let host = &std::env::var("HOST").unwrap_or("127.0.0.1".to_string());
+    let port: i32 = match &std::env::var("PORT").map(|port| port.parse()) {
+        Ok(Ok(p)) => *p,
+        Ok(Err(_)) => 8080,
+        Err(_) => 8080
+    };
+
     let db_pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
         .await
         .expect("Failed to create pool");
 
-    info!("Starting server at http://127.0.0.1:8080");
+    info!("Starting server at http://{host}:{port}");
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(db_pool.clone()))
+            .app_data(web::Data::new(AppState{db: db_pool.clone()}))
             .wrap(Logger::default())
+            .service(api::scope())
             .route("/", web::get().to(serve_index))
             .route("/about", web::get().to(serve_index))
             .route("/{filename:.*}", web::get().to(serve_file))
-            .service(api::scope())
+            
     })
-    .bind("127.0.0.1:8080")?
+    .bind(format!("{host}:{port}"))?
     .run()
     .await
 }

@@ -1,9 +1,15 @@
-use actix_web::{get, post, put, delete, web::{self}, HttpResponse, Responder, Scope};
-use serde::{Deserialize, Serialize};
+use actix_web::{
+    delete, get, post, put,
+    web::{self},
+    HttpResponse, Responder, Scope,
+};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
 use crate::AppState;
+
+mod car;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct Event {
@@ -11,7 +17,7 @@ pub struct Event {
     pub name: String,
     pub location: String,
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>
+    pub end_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize)]
@@ -19,7 +25,7 @@ pub struct CreateEvent {
     pub name: String,
     pub location: String,
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>
+    pub end_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize)]
@@ -27,7 +33,7 @@ struct UpdateEvent {
     pub name: Option<String>,
     pub location: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>
+    pub end_time: Option<DateTime<Utc>>,
 }
 
 #[post("/")]
@@ -42,9 +48,7 @@ async fn create_event(data: web::Data<AppState>, event: web::Json<CreateEvent>) 
     .await;
 
     match result {
-        Ok(record) => {
-            HttpResponse::Ok().json(record.id)
-        },
+        Ok(record) => HttpResponse::Ok().json(record.id),
         Err(_) => HttpResponse::InternalServerError().body("Failed to create event"),
     }
 }
@@ -52,14 +56,10 @@ async fn create_event(data: web::Data<AppState>, event: web::Json<CreateEvent>) 
 #[get("/{event_id}")]
 async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
     let event_id = path.into_inner();
-    let result: Option<Event> = query_as!(
-        Event,
-        r#"SELECT * FROM event WHERE id = $1"#,
-        event_id
-    )
-    .fetch_optional(&data.db)
-    .await
-    .unwrap_or(None);
+    let result: Option<Event> = query_as!(Event, r#"SELECT * FROM event WHERE id = $1"#, event_id)
+        .fetch_optional(&data.db)
+        .await
+        .unwrap_or(None);
 
     match result {
         Some(user) => HttpResponse::Ok().json(user),
@@ -69,12 +69,9 @@ async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Resp
 
 #[get("/")]
 async fn get_all_events(data: web::Data<AppState>) -> impl Responder {
-    let result = query_as!(
-        Event,
-        r#"SELECT * FROM event"#
-    )
-    .fetch_all(&data.db)
-    .await;
+    let result = query_as!(Event, r#"SELECT * FROM event"#)
+        .fetch_all(&data.db)
+        .await;
 
     match result {
         Ok(events) => HttpResponse::Ok().json(events),
@@ -99,7 +96,11 @@ async fn update_event(
         end_time = COALESCE($4, end_time)
         WHERE id = $5 RETURNING id
         "#,
-        event.name, event.location, event.start_time, event.end_time, event_id
+        event.name,
+        event.location,
+        event.start_time,
+        event.end_time,
+        event_id
     )
     .fetch_optional(&data.db)
     .await;
@@ -122,7 +123,7 @@ async fn delete_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
     match deleted {
         Ok(Some(_)) => HttpResponse::Ok().body("Event deleted"),
         Ok(None) => HttpResponse::NotFound().body("Event not found"),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to delete user"),
+        Err(_) => HttpResponse::InternalServerError().body("Failed to delete event"),
     }
 }
 
@@ -130,6 +131,8 @@ pub fn scope() -> Scope {
     web::scope("/event")
         .service(create_event)
         .service(get_event)
+        .service(get_all_events)
         .service(update_event)
         .service(delete_event)
+        .service(car::scope())
 }
