@@ -4,6 +4,7 @@ use log::info;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
 mod api;
+mod pings;
 
 #[derive(Clone)]
 struct AppState {
@@ -43,7 +44,7 @@ async fn main() -> std::io::Result<()> {
     let port: i32 = match &std::env::var("PORT").map(|port| port.parse()) {
         Ok(Ok(p)) => *p,
         Ok(Err(_)) => 8080,
-        Err(_) => 8080
+        Err(_) => 8080,
     };
 
     let db_pool = PgPoolOptions::new()
@@ -55,13 +56,14 @@ async fn main() -> std::io::Result<()> {
     info!("Starting server at http://{host}:{port}");
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState{db: db_pool.clone()}))
+            .app_data(web::Data::new(AppState {
+                db: db_pool.clone(),
+            }))
             .wrap(Logger::default())
             .service(api::scope())
             .route("/", web::get().to(serve_index))
             .route("/about", web::get().to(serve_index))
             .route("/{filename:.*}", web::get().to(serve_file))
-            
     })
     .bind(format!("{host}:{port}"))?
     .run()
