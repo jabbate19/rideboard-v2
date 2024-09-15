@@ -1,3 +1,4 @@
+use actix_session::Session;
 use actix_web::{
     delete, get, post, put,
     web::{self},
@@ -7,6 +8,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
+use crate::auth::SessionAuth;
 use crate::AppState;
 
 mod car;
@@ -36,8 +38,12 @@ struct UpdateEvent {
     pub end_time: Option<DateTime<Utc>>,
 }
 
-#[post("/")]
-async fn create_event(data: web::Data<AppState>, event: web::Json<CreateEvent>) -> impl Responder {
+#[post("/", wrap = "SessionAuth")]
+async fn create_event(
+    data: web::Data<AppState>,
+    session: Session,
+    event: web::Json<CreateEvent>,
+) -> impl Responder {
     let result = sqlx::query!(
         r#"
         INSERT INTO event (name, location, start_time, end_time) VALUES ($1, $2, $3, $4) RETURNING id
@@ -53,8 +59,12 @@ async fn create_event(data: web::Data<AppState>, event: web::Json<CreateEvent>) 
     }
 }
 
-#[get("/{event_id}")]
-async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
+#[get("/{event_id}", wrap = "SessionAuth")]
+async fn get_event(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<i32>,
+) -> impl Responder {
     let event_id = path.into_inner();
     let result: Option<Event> = query_as!(Event, r#"SELECT * FROM event WHERE id = $1"#, event_id)
         .fetch_optional(&data.db)
@@ -67,8 +77,8 @@ async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Resp
     }
 }
 
-#[get("/")]
-async fn get_all_events(data: web::Data<AppState>) -> impl Responder {
+#[get("/", wrap = "SessionAuth")]
+async fn get_all_events(data: web::Data<AppState>, session: Session) -> impl Responder {
     let result = query_as!(Event, r#"SELECT * FROM event"#)
         .fetch_all(&data.db)
         .await;
@@ -79,9 +89,10 @@ async fn get_all_events(data: web::Data<AppState>) -> impl Responder {
     }
 }
 
-#[put("/{event_id}")]
+#[put("/{event_id}", wrap = "SessionAuth")]
 async fn update_event(
     data: web::Data<AppState>,
+    session: Session,
     path: web::Path<i32>,
     event: web::Json<UpdateEvent>,
 ) -> impl Responder {
@@ -112,8 +123,12 @@ async fn update_event(
     }
 }
 
-#[delete("/{event_id}")]
-async fn delete_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
+#[delete("/{event_id}", wrap = "SessionAuth")]
+async fn delete_event(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<i32>,
+) -> impl Responder {
     let event_id = path.into_inner();
 
     let deleted = sqlx::query!("DELETE FROM event WHERE id = $1 RETURNING id", event_id)

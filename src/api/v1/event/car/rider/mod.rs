@@ -1,3 +1,4 @@
+use actix_session::Session;
 use actix_web::{
     delete, get, post,
     web::{self},
@@ -6,6 +7,7 @@ use actix_web::{
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
+use crate::auth::SessionAuth;
 use crate::AppState;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
@@ -20,9 +22,10 @@ pub struct CreateRider {
     pub name: String,
 }
 
-#[post("/")]
+#[post("/", wrap = "SessionAuth")]
 async fn create_rider(
     data: web::Data<AppState>,
+    session: Session,
     rider: web::Json<CreateRider>,
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
@@ -43,8 +46,12 @@ async fn create_rider(
     }
 }
 
-#[get("/{rider_id}")]
-async fn get_rider(data: web::Data<AppState>, path: web::Path<(i32, i32, i32)>) -> impl Responder {
+#[get("/{rider_id}", wrap = "SessionAuth")]
+async fn get_rider(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<(i32, i32, i32)>,
+) -> impl Responder {
     let (event_id, car_id, rider_id) = path.into_inner();
     let result: Option<Rider> = query_as!(
         Rider,
@@ -63,8 +70,12 @@ async fn get_rider(data: web::Data<AppState>, path: web::Path<(i32, i32, i32)>) 
     }
 }
 
-#[get("/")]
-async fn get_all_riders(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl Responder {
+#[get("/", wrap = "SessionAuth")]
+async fn get_all_riders(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<(i32, i32)>,
+) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
     let result = query_as!(Rider, r#"SELECT rider.* FROM rider JOIN car ON car.id=rider.car_id WHERE car.event_id = $1 AND car.id = $2"#, event_id, car_id)
         .fetch_all(&data.db)
@@ -76,9 +87,10 @@ async fn get_all_riders(data: web::Data<AppState>, path: web::Path<(i32, i32)>) 
     }
 }
 
-#[delete("/{rider_id}")]
+#[delete("/{rider_id}", wrap = "SessionAuth")]
 async fn delete_rider(
     data: web::Data<AppState>,
+    session: Session,
     path: web::Path<(i32, i32, i32)>,
 ) -> impl Responder {
     let (_event_id, car_id, rider_id) = path.into_inner();

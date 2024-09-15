@@ -1,10 +1,10 @@
 use actix_web::{web, Scope};
 
+mod auth;
 mod event;
-mod login;
 
 pub fn scope() -> Scope {
     web::scope("/v1")
-        .service(login::scope())
+        .service(auth::scope())
         .service(event::scope())
 }

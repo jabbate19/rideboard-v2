@@ -1,3 +1,4 @@
+use actix_session::Session;
 use actix_web::{
     delete, get, post, put,
     web::{self},
@@ -7,6 +8,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
+use crate::auth::SessionAuth;
 use crate::AppState;
 
 mod rider;
@@ -37,9 +39,10 @@ struct UpdateCar {
     pub return_time: Option<DateTime<Utc>>,
 }
 
-#[post("/")]
+#[post("/", wrap = "SessionAuth")]
 async fn create_car(
     data: web::Data<AppState>,
+    session: Session,
     car: web::Json<CreateCar>,
     path: web::Path<i32>,
 ) -> impl Responder {
@@ -59,8 +62,12 @@ async fn create_car(
     }
 }
 
-#[get("/{car_id}")]
-async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl Responder {
+#[get("/{car_id}", wrap = "SessionAuth")]
+async fn get_car(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<(i32, i32)>,
+) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
     let result: Option<Car> = query_as!(
         Car,
@@ -78,8 +85,12 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
     }
 }
 
-#[get("/")]
-async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
+#[get("/", wrap = "SessionAuth")]
+async fn get_all_cars(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<i32>,
+) -> impl Responder {
     let event_id: i32 = path.into_inner();
     let result = query_as!(Car, r#"SELECT * FROM car WHERE event_id = $1"#, event_id)
         .fetch_all(&data.db)
@@ -91,9 +102,10 @@ async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
     }
 }
 
-#[put("/{car_id}")]
+#[put("/{car_id}", wrap = "SessionAuth")]
 async fn update_car(
     data: web::Data<AppState>,
+    session: Session,
     path: web::Path<(i32, i32)>,
     car: web::Json<UpdateCar>,
 ) -> impl Responder {
@@ -125,8 +137,12 @@ async fn update_car(
     }
 }
 
-#[delete("/{car_id}")]
-async fn delete_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl Responder {
+#[delete("/{car_id}", wrap = "SessionAuth")]
+async fn delete_car(
+    data: web::Data<AppState>,
+    session: Session,
+    path: web::Path<(i32, i32)>,
+) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
 
     let deleted = sqlx::query!(
