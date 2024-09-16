@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import HistoryView from '../views/HistoryView.vue'
+import { useAuthStore } from '@/stores/auth';
+import { type UserData } from '@/models';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,20 +31,29 @@ const router = createRouter({
   ]
 })
 
-async function isAuthenticated() {
-  return await fetch("/api/v1/auth/").then(resp => resp.status == 200)
-}
-
 router.beforeEach(async (to, from, next) => {
-  let authenticated = await isAuthenticated();
+  const authStore = useAuthStore(); // Access the auth store
 
-  if (to.matched.some(record => record.path == '/login')) {
-    next();
-  } else {
-    if (!authenticated) {
-      next('/login');  // Redirect to login if not authenticated
+  try {
+    await fetch('/api/v1/auth/').then(async response => {
+        if (response.status != 200) {
+            throw Error("Bad Return Code");
+        }
+        let jsonData: UserData = await response.json()
+        return jsonData
+    }).then(jsonData => {
+        if (jsonData.type == "CSH") {
+            jsonData.picture = `https://profiles.csh.rit.edu/image/${jsonData.preferred_username}`
+        }
+        authStore.setUser(jsonData);
+        next();
+    });
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    if (to.matched.some(record => record.path == '/login')) {
+      next();
     } else {
-      next();  // Allow access
+      next("/login")
     }
   }
 });

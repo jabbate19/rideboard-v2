@@ -3,6 +3,7 @@ use actix_web::{get, http::header, post, web, HttpResponse, Responder, Scope};
 use models::AuthType;
 use serde_json::Value;
 use crate::auth::SessionAuth;
+use crate::api::v1::auth::models::UserInfo;
 
 mod csh;
 mod google;
@@ -21,7 +22,7 @@ async fn logout(session: Session) -> impl Responder {
 #[get("/", wrap="SessionAuth")]
 async fn get_user_data(session: Session) -> impl Responder {
     let out: Option<AuthType> = session.get("userinfo").unwrap();
-    HttpResponse::Ok().json(out)
+    HttpResponse::Ok().json(out.map(|user_info| UserInfo::from(user_info)))
 }
 
 pub fn scope() -> Scope {

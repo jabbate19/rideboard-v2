@@ -11,6 +11,8 @@ use sqlx::query_as;
 use crate::auth::SessionAuth;
 use crate::AppState;
 
+use log::error;
+
 mod rider;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
@@ -21,6 +23,18 @@ pub struct Car {
     pub max_capacity: i32,
     pub departure_time: DateTime<Utc>,
     pub return_time: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+pub struct CarData {
+    pub id: i32,
+    pub event_id: Option<i32>,
+    pub driver: String,
+    pub riders: Vec<String>,
+    pub max_capacity: i32,
+    pub departure_time: DateTime<Utc>,
+    pub return_time: DateTime<Utc>,
+    pub comment: String,
 }
 
 #[derive(Deserialize)]
@@ -69,9 +83,9 @@ async fn get_car(
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    let result: Option<Car> = query_as!(
-        Car,
-        r#"SELECT * FROM car WHERE event_id = $1 AND id = $2"#,
+    let result: Option<CarData> = query_as!(
+        CarData,
+        r#"SELECT car.*, ARRAY_AGG(rider.name) as "riders!: Vec<String>" FROM car LEFT JOIN rider on car.id = rider.car_id WHERE event_id = $1 AND car.id = $2 GROUP BY car.id"#,
         event_id,
         car_id
     )
@@ -80,7 +94,7 @@ async fn get_car(
     .unwrap_or(None);
 
     match result {
-        Some(user) => HttpResponse::Ok().json(user),
+        Some(car) => HttpResponse::Ok().json(car),
         None => HttpResponse::NotFound().body("Car not found"),
     }
 }
@@ -92,13 +106,16 @@ async fn get_all_cars(
     path: web::Path<i32>,
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
-    let result = query_as!(Car, r#"SELECT * FROM car WHERE event_id = $1"#, event_id)
+    let result = query_as!(CarData, r#"SELECT car.*, ARRAY_AGG(rider.name) as "riders!: Vec<String>" FROM car LEFT JOIN rider on car.id = rider.car_id WHERE event_id = $1 GROUP BY car.id"#, event_id)
         .fetch_all(&data.db)
         .await;
 
     match result {
-        Ok(events) => HttpResponse::Ok().json(events),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to get cars"),
+        Ok(cars) => HttpResponse::Ok().json(cars),
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().body("Failed to get cars")
+        },
     }
 }
 

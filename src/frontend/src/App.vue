@@ -32,4 +32,7 @@ main {
   margin-left: 150px;
   margin-right: 150px;
 }
+body {
+  padding-top: 70px;
+}
 </style>

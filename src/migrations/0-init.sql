@@ -9,14 +9,15 @@ CREATE TABLE event (
 CREATE TABLE car (
     id SERIAL PRIMARY KEY,
     event_id INT REFERENCES event(id) ON DELETE CASCADE,
-    driver VARCHAR(255) NOT NULL,
+    driver VARCHAR NOT NULL,
     max_capacity INT NOT NULL,
     departure_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    return_time TIMESTAMP WITH TIME ZONE NOT NULL
+    return_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    comment VARCHAR NOT NULL
 );
 
 CREATE TABLE rider (
     id SERIAL PRIMARY KEY,
     car_id INT REFERENCES car(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR NOT NULL
 );
