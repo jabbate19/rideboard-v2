@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import UserMenu from './components/UserMenu.vue'
 </script>
 
 <template>
@@ -14,23 +15,15 @@ import { RouterLink, RouterView } from 'vue-router'
         <ul class="navbar-nav mr-auto">
           <RouterLink class="nav-link" to="/history">History</RouterLink>
         </ul>
-        <ul class="nav navbar-nav ml-auto">
-          <li class="nav-item navbar-user dropdown">
-            <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" id="user01">
-              <img src=''> First Last
-              <span class="caret"></span>
-            </a>
-            <div class="dropdown-menu" aria-labelledby="user01">
-              <!-- <div class="dropdown-divider"></div> -->
-              <a class="dropdown-item" href="/logout">Logout</a>
-            </div>
-          </li>
-        </ul>
+        <UserMenu/>
       </div>
     </div>
   </nav>
 
   <RouterView />
+  <footer class="text-center">
+    <a class="text-primary" href="https://github.com/jabbate19/rideboard-v2">Rideboard</a>
+  </footer>
 </template>
 
 <style>

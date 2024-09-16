@@ -1,3 +1,5 @@
+use std::env;
+
 use actix_session::storage::CookieSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
@@ -15,7 +17,9 @@ mod pings;
 struct AppState {
     db: PgPool,
     google_oauth: BasicClient,
+    google_userinfo_url: String,
     csh_oauth: BasicClient,
+    csh_userinfo_url: String,
 }
 
 // Embed the 'static' directory into the binary
@@ -71,16 +75,21 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(AppState {
                 db: db_pool.clone(),
                 google_oauth: google_client,
+                google_userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo".to_string(),
                 csh_oauth: csh_client,
+                csh_userinfo_url: env::var("CSH_USERINFO_URL")
+                    .expect("Missing Userinfo URL for CSH Auth"),
             }))
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(),
-                session_key.clone(),
-            ))
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
+                    .cookie_secure(false)
+                    .build(),
+            )
             .wrap(Logger::default())
             .service(api::scope())
             .route("/", web::get().to(serve_index))
             .route("/about", web::get().to(serve_index))
+            .route("/login", web::get().to(serve_index))
             .route("/{filename:.*}", web::get().to(serve_file))
     })
     .bind(format!("{host}:{port}"))?
