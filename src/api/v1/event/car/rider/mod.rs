@@ -1,27 +1,47 @@
 use actix_session::Session;
 use actix_web::{
-    delete, get, post,
+    delete, post,
     web::{self},
     HttpResponse, Responder, Scope,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::query_as;
+use utoipa::{OpenApi, ToSchema};
 
 use crate::auth::SessionAuth;
 use crate::AppState;
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        create_rider,
+        delete_rider
+    ),
+    components(schemas(Rider, CreateRider))
+)]
+pub struct ApiDoc;
+
+#[derive(Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct Rider {
     pub id: i32,
     pub car_id: Option<i32>,
     pub name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateRider {
     pub name: String,
 }
 
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id"),
+        ("car_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items", body = i32)
+    )
+)]
 #[post("/", wrap = "SessionAuth")]
 async fn create_rider(
     data: web::Data<AppState>,
@@ -46,47 +66,15 @@ async fn create_rider(
     }
 }
 
-#[get("/{rider_id}", wrap = "SessionAuth")]
-async fn get_rider(
-    data: web::Data<AppState>,
-    session: Session,
-    path: web::Path<(i32, i32, i32)>,
-) -> impl Responder {
-    let (event_id, car_id, rider_id) = path.into_inner();
-    let result: Option<Rider> = query_as!(
-        Rider,
-        r#"SELECT rider.* FROM rider JOIN car ON car.id=rider.car_id WHERE car.event_id = $1 AND car.id = $2 AND rider.id = $3"#,
-        event_id,
-        car_id,
-        rider_id
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id"),
+        ("car_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items", body = i32)
     )
-    .fetch_optional(&data.db)
-    .await
-    .unwrap_or(None);
-
-    match result {
-        Some(user) => HttpResponse::Ok().json(user),
-        None => HttpResponse::NotFound().body("Rider not found"),
-    }
-}
-
-#[get("/", wrap = "SessionAuth")]
-async fn get_all_riders(
-    data: web::Data<AppState>,
-    session: Session,
-    path: web::Path<(i32, i32)>,
-) -> impl Responder {
-    let (event_id, car_id) = path.into_inner();
-    let result = query_as!(Rider, r#"SELECT rider.* FROM rider JOIN car ON car.id=rider.car_id WHERE car.event_id = $1 AND car.id = $2"#, event_id, car_id)
-        .fetch_all(&data.db)
-        .await;
-
-    match result {
-        Ok(events) => HttpResponse::Ok().json(events),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to get cars"),
-    }
-}
-
+)]
 #[delete("/{rider_id}", wrap = "SessionAuth")]
 async fn delete_rider(
     data: web::Data<AppState>,
@@ -113,7 +101,5 @@ async fn delete_rider(
 pub fn scope() -> Scope {
     web::scope("/{car_id}/rider")
         .service(create_rider)
-        .service(get_rider)
-        .service(get_all_riders)
         .service(delete_rider)
 }

@@ -7,15 +7,31 @@ use actix_web::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
-
 use crate::auth::SessionAuth;
 use crate::AppState;
+use utoipa::{OpenApi, ToSchema};
 
 use log::error;
 
 mod rider;
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(OpenApi)]
+#[openapi(
+    nest(
+        (path = "/{car_id}/rider", api = rider::ApiDoc),
+    ),
+    paths(
+        create_car,
+        get_car,
+        get_all_cars,
+        update_car,
+        delete_car
+    ),
+    components(schemas(CarData, CreateCar, UpdateCar))
+)]
+pub struct ApiDoc;
+
+#[derive(Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct Car {
     pub id: i32,
     pub event_id: Option<i32>,
@@ -25,7 +41,7 @@ pub struct Car {
     pub return_time: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct CarData {
     pub id: i32,
     pub event_id: Option<i32>,
@@ -37,7 +53,7 @@ pub struct CarData {
     pub comment: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateCar {
     pub driver: String,
     pub max_capacity: i32,
@@ -45,7 +61,7 @@ pub struct CreateCar {
     pub return_time: DateTime<Utc>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct UpdateCar {
     pub driver: Option<String>,
     pub max_capacity: Option<i32>,
@@ -53,6 +69,14 @@ struct UpdateCar {
     pub return_time: Option<DateTime<Utc>>,
 }
 
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items", body = i32)
+    )
+)]
 #[post("/", wrap = "SessionAuth")]
 async fn create_car(
     data: web::Data<AppState>,
@@ -76,6 +100,14 @@ async fn create_car(
     }
 }
 
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items", body = CarData)
+    )
+)]
 #[get("/{car_id}", wrap = "SessionAuth")]
 async fn get_car(
     data: web::Data<AppState>,
@@ -99,6 +131,14 @@ async fn get_car(
     }
 }
 
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items", body = [CarData])
+    )
+)]
 #[get("/", wrap = "SessionAuth")]
 async fn get_all_cars(
     data: web::Data<AppState>,
@@ -119,6 +159,14 @@ async fn get_all_cars(
     }
 }
 
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items")
+    )
+)]
 #[put("/{car_id}", wrap = "SessionAuth")]
 async fn update_car(
     data: web::Data<AppState>,
@@ -154,6 +202,14 @@ async fn update_car(
     }
 }
 
+#[utoipa::path(
+    params(
+        ("event_id" = i32, Path, description = "This is nest id")
+    ),
+    responses(
+        (status = 200, description = "List current todo items")
+    )
+)]
 #[delete("/{car_id}", wrap = "SessionAuth")]
 async fn delete_car(
     data: web::Data<AppState>,

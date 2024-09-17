@@ -11,26 +11,46 @@ use sqlx::query_as;
 use crate::auth::SessionAuth;
 use crate::AppState;
 
+use utoipa::{OpenApi, ToSchema};
+
 mod car;
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(OpenApi)]
+#[openapi(
+    nest(
+        (path = "/{event_id}/car", api = car::ApiDoc),
+    ),
+    paths(
+        create_event,
+        get_event,
+        get_all_events,
+        update_event,
+        delete_event
+    ),
+    components(schemas(Event, CreateEvent, UpdateEvent))
+)]
+pub(super) struct ApiDoc;
+
+#[derive(Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct Event {
     pub id: i32,
     pub name: String,
     pub location: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub creator: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateEvent {
     pub name: String,
     pub location: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub creator: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct UpdateEvent {
     pub name: Option<String>,
     pub location: Option<String>,
@@ -38,6 +58,11 @@ struct UpdateEvent {
     pub end_time: Option<DateTime<Utc>>,
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items", body = i32)
+    )
+)]
 #[post("/", wrap = "SessionAuth")]
 async fn create_event(
     data: web::Data<AppState>,
@@ -46,9 +71,9 @@ async fn create_event(
 ) -> impl Responder {
     let result = sqlx::query!(
         r#"
-        INSERT INTO event (name, location, start_time, end_time) VALUES ($1, $2, $3, $4) RETURNING id
+        INSERT INTO event (name, location, start_time, end_time, creator) VALUES ($1, $2, $3, $4, $5) RETURNING id
         "#,
-        event.name, event.location, event.start_time, event.end_time
+        event.name, event.location, event.start_time, event.end_time, event.creator
     )
     .fetch_one(&data.db)
     .await;
@@ -59,6 +84,11 @@ async fn create_event(
     }
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items", body = Event)
+    )
+)]
 #[get("/{event_id}", wrap = "SessionAuth")]
 async fn get_event(
     data: web::Data<AppState>,
@@ -77,6 +107,11 @@ async fn get_event(
     }
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items", body = [Event])
+    )
+)]
 #[get("/", wrap = "SessionAuth")]
 async fn get_all_events(data: web::Data<AppState>, session: Session) -> impl Responder {
     let result = query_as!(Event, r#"SELECT * FROM event"#)
@@ -89,6 +124,11 @@ async fn get_all_events(data: web::Data<AppState>, session: Session) -> impl Res
     }
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items")
+    )
+)]
 #[put("/{event_id}", wrap = "SessionAuth")]
 async fn update_event(
     data: web::Data<AppState>,
@@ -123,6 +163,11 @@ async fn update_event(
     }
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items")
+    )
+)]
 #[delete("/{event_id}", wrap = "SessionAuth")]
 async fn delete_event(
     data: web::Data<AppState>,

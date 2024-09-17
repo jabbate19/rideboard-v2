@@ -2,9 +2,9 @@ use actix_session::Session;
 use actix_web::http::header;
 use actix_web::{HttpResponse, Responder};
 use oauth2::reqwest::async_http_client;
-use oauth2::{AuthorizationCode, CsrfToken, PkceCodeChallenge, Scope as OAuthScope, TokenResponse};
+use oauth2::{AuthorizationCode, TokenResponse};
 use reqwest::Client;
-use serde_json::Value;
+use utoipa::{OpenApi, ToSchema};
 
 use crate::api::v1::auth::common;
 use crate::api::v1::auth::models::{AuthType, GoogleUserInfo};
@@ -12,17 +12,37 @@ use crate::AppState;
 use actix_web::{get, web, Scope};
 use serde::Deserialize;
 
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        login,
+        auth,
+    ),
+    components(schemas(AuthRequest))
+)]
+pub(super) struct ApiDoc;
+
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items")
+    )
+)]
 #[get("/")]
 async fn login(data: web::Data<AppState>) -> impl Responder {
     common::login(&data.google_oauth, Vec::from(["openid".to_string(), "profile".to_string(), "email".to_string()])).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct AuthRequest {
     code: String,
     state: String,
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "List current todo items")
+    )
+)]
 #[get("/redirect")]
 async fn auth(
     session: Session,

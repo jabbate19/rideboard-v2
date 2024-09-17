@@ -1,8 +1,6 @@
-use actix_session::Session;
-use actix_web::http::header;
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder};
 use oauth2::basic::BasicClient;
-use oauth2::{AuthorizationCode, CsrfToken, PkceCodeChallenge, Scope as OAuthScope};
+use oauth2::{CsrfToken, Scope as OAuthScope};
 
 pub async fn login(client: &BasicClient, scopes: Vec<String>) -> impl Responder {
     //let (pkce_code_challenge, _pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
