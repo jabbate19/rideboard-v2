@@ -35,11 +35,11 @@ pub struct CreateRider {
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id"),
-        ("car_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Rider Applies To"),
+        ("car_id" = i32, Path, description = "ID of the Car this Rider Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items", body = i32)
+        (status = 200, description = "Add a rider to a car. Rider name must be current user unless car driver.", body = i32)
     )
 )]
 #[post("/", wrap = "SessionAuth")]
@@ -68,11 +68,11 @@ async fn create_rider(
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id"),
-        ("car_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Rider Applies To"),
+        ("car_id" = i32, Path, description = "ID of the Car this Rider Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items", body = i32)
+        (status = 200, description = "Remove rider from car. Must be done by rider or driver.", body = i32)
     )
 )]
 #[delete("/{rider_id}", wrap = "SessionAuth")]

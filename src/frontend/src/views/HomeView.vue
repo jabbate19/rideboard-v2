@@ -8,12 +8,17 @@ import EventDetails from '@/components/EventDetails.vue'
     <div class="row">
       <!-- Left column: List of cards -->
       <div class="cardlist col-4 p-auto card-header">
-        <EventCard v-for="card in cards" :card="card" @click="selectCard(card)" />
+        <EventCard
+          v-for="(card, index) in cards"
+          :card="card"
+          :key="index"
+          @click="selectCard(card)"
+        />
       </div>
 
       <!-- Right column: Display selected card details -->
       <div class="col-8">
-        <EventDetails v-if="selectedCard" :event="selectedCard"/>
+        <EventDetails v-if="selectedCard" :event="selectedCard" />
         <div v-else>
           <p>Select an Event to see details</p>
         </div>
@@ -23,36 +28,36 @@ import EventDetails from '@/components/EventDetails.vue'
 </template>
 
 <script lang="ts">
-import { type Event } from '@/models';
+import { type Event } from '@/models'
 
 export default {
   data() {
     return {
       cards: [] as Event[],
-      selectedCard: null as Event | null,
-    };
+      selectedCard: null as Event | null
+    }
   },
   methods: {
     async fetchCardData() {
       try {
-        const response = await fetch('/api/v1/event/');
+        const response = await fetch('/api/v1/event/')
         if (!response.ok) {
-          throw new Error(`Error: ${response.statusText}`);
+          throw new Error(`Error: ${response.statusText}`)
         }
-        const data = await response.json();
-        this.cards = data; // assuming the API returns an array of card objects
+        const data = await response.json()
+        this.cards = data // assuming the API returns an array of card objects
       } catch (error) {
-        console.error('Error fetching card data:', error);
+        console.error('Error fetching card data:', error)
       }
     },
     selectCard(card: Event) {
-      this.selectedCard = card;
-    },
+      this.selectedCard = card
+    }
   },
   created() {
-    this.fetchCardData(); // Fetch card data when the component is created
-  },
-};
+    this.fetchCardData() // Fetch card data when the component is created
+  }
+}
 </script>
 
 <style>

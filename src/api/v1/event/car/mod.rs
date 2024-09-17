@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 use crate::auth::SessionAuth;
 use crate::AppState;
+use crate::api::v1::auth::models::UserInfo;
 use utoipa::{OpenApi, ToSchema};
 
 use log::error;
@@ -55,7 +56,6 @@ pub struct CarData {
 
 #[derive(Deserialize, ToSchema)]
 pub struct CreateCar {
-    pub driver: String,
     pub max_capacity: i32,
     pub departure_time: DateTime<Utc>,
     pub return_time: DateTime<Utc>,
@@ -71,10 +71,10 @@ struct UpdateCar {
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items", body = i32)
+        (status = 200, description = "Create new Car for Event.", body = i32)
     )
 )]
 #[post("/", wrap = "SessionAuth")]
@@ -89,7 +89,7 @@ async fn create_car(
         r#"
         INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time) VALUES ($1, $2, $3, $4, $5) RETURNING id
         "#,
-        event_id, car.driver, car.max_capacity, car.departure_time, car.return_time
+        event_id, session.get::<UserInfo>("userdata").unwrap().unwrap().id, car.max_capacity, car.departure_time, car.return_time
     )
     .fetch_one(&data.db)
     .await;
@@ -102,10 +102,10 @@ async fn create_car(
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items", body = CarData)
+        (status = 200, description = "Get car by ID", body = CarData)
     )
 )]
 #[get("/{car_id}", wrap = "SessionAuth")]
@@ -133,10 +133,10 @@ async fn get_car(
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items", body = [CarData])
+        (status = 200, description = "Get all cars for event", body = [CarData])
     )
 )]
 #[get("/", wrap = "SessionAuth")]
@@ -161,10 +161,10 @@ async fn get_all_cars(
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Update Car")
     )
 )]
 #[put("/{car_id}", wrap = "SessionAuth")]
@@ -204,10 +204,10 @@ async fn update_car(
 
 #[utoipa::path(
     params(
-        ("event_id" = i32, Path, description = "This is nest id")
+        ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Delete Car")
     )
 )]
 #[delete("/{car_id}", wrap = "SessionAuth")]

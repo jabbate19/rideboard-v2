@@ -7,7 +7,7 @@ use reqwest::Client;
 use utoipa::{OpenApi, ToSchema};
 
 use crate::api::v1::auth::common;
-use crate::api::v1::auth::models::{AuthType, GoogleUserInfo};
+use crate::api::v1::auth::models::{GoogleUserInfo, UserInfo};
 use crate::AppState;
 use actix_web::{get, web, Scope};
 use serde::Deserialize;
@@ -24,7 +24,7 @@ pub(super) struct ApiDoc;
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Redirect to OAuth2 Link to Log In")
     )
 )]
 #[get("/")]
@@ -40,7 +40,7 @@ pub struct AuthRequest {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Redirect to OAuth2 to verify code and update user info.")
     )
 )]
 #[get("/redirect")]
@@ -73,7 +73,7 @@ async fn auth(
         .unwrap();
 
     session.insert("login", true).unwrap();
-    session.insert("userinfo", AuthType::GOOGLE(user_info)).unwrap();
+    session.insert("userinfo", UserInfo::from(user_info)).unwrap();
 
     HttpResponse::Found().append_header((header::LOCATION, "/")).finish()
 }

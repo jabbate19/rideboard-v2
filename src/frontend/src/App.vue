@@ -7,15 +7,19 @@ import UserMenu from './components/UserMenu.vue'
   <nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
       <a class="navbar-brand abs" href="/">Rideboard</a>
-      <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse"
-              data-target="#navbarResponsive">
+      <button
+        class="navbar-toggler navbar-toggler-right"
+        type="button"
+        data-toggle="collapse"
+        data-target="#navbarResponsive"
+      >
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarResponsive">
         <ul class="navbar-nav mr-auto">
           <RouterLink class="nav-link" to="/history">History</RouterLink>
         </ul>
-        <UserMenu/>
+        <UserMenu />
       </div>
     </div>
   </nav>

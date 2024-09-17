@@ -1,14 +1,13 @@
 use actix_session::Session;
 use actix_web::{get, http::header, post, web, HttpResponse, Responder, Scope};
-use models::AuthType;
 use crate::auth::SessionAuth;
 use crate::api::v1::auth::models::UserInfo;
-use utoipa::{OpenApi};
+use utoipa::OpenApi;
 
 mod csh;
 mod google;
 mod common;
-mod models;
+pub mod models;
 
 #[utoipa::path(
     responses(
@@ -31,8 +30,8 @@ async fn logout(session: Session) -> impl Responder {
 )]
 #[get("/", wrap="SessionAuth")]
 async fn get_user_data(session: Session) -> impl Responder {
-    let out: Option<AuthType> = session.get("userinfo").unwrap();
-    HttpResponse::Ok().json(out.map(UserInfo::from))
+    let out: Option<UserInfo> = session.get("userinfo").unwrap();
+    HttpResponse::Ok().json(out)
 }
 
 #[derive(OpenApi)]

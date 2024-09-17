@@ -6,7 +6,7 @@ use oauth2::{AuthorizationCode, TokenResponse};
 use reqwest::Client;
 use utoipa::{OpenApi, ToSchema};
 
-use crate::api::v1::auth::models::{AuthType, CSHUserInfo};
+use crate::api::v1::auth::models::{CSHUserInfo, UserInfo};
 use crate::AppState;
 use actix_web::{get, Scope};
 use serde::Deserialize;
@@ -25,7 +25,7 @@ pub(super) struct ApiDoc;
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Redirect to OAuth2 Link to Log In")
     )
 )]
 #[get("/")]
@@ -41,7 +41,7 @@ pub struct AuthRequest {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Redirect to OAuth2 to verify code and update user info.")
     )
 )]
 #[get("/redirect")]
@@ -72,7 +72,7 @@ async fn auth(
         .unwrap();
 
     session.insert("login", true).unwrap();
-    session.insert("userinfo", AuthType::CSH(user_info)).unwrap();
+    session.insert("userinfo", UserInfo::from(user_info)).unwrap();
 
     HttpResponse::Found().append_header((header::LOCATION, "/")).finish()
 }

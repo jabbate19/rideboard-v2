@@ -60,7 +60,7 @@ struct UpdateEvent {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items", body = i32)
+        (status = 200, description = "Create New Event. Returns ID", body = i32)
     )
 )]
 #[post("/", wrap = "SessionAuth")]
@@ -86,7 +86,7 @@ async fn create_event(
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items", body = Event)
+        (status = 200, description = "Get event specified by ID", body = Event)
     )
 )]
 #[get("/{event_id}", wrap = "SessionAuth")]
@@ -109,7 +109,7 @@ async fn get_event(
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items", body = [Event])
+        (status = 200, description = "Get all events", body = [Event])
     )
 )]
 #[get("/", wrap = "SessionAuth")]
@@ -126,7 +126,7 @@ async fn get_all_events(data: web::Data<AppState>, session: Session) -> impl Res
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Update event information")
     )
 )]
 #[put("/{event_id}", wrap = "SessionAuth")]
@@ -165,7 +165,7 @@ async fn update_event(
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Delete Event")
     )
 )]
 #[delete("/{event_id}", wrap = "SessionAuth")]

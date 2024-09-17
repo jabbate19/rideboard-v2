@@ -24,11 +24,11 @@ export default {
   methods: {
     async redirect(provider: string) {
       if (provider === 'csh') {
-        const response = await fetch('/api/v1/auth/csh/');
-        window.location.href = await response.text();
+        const response = await fetch('/api/v1/auth/csh/')
+        window.location.href = await response.text()
       } else if (provider === 'google') {
-        const response = await fetch('/api/v1/auth/google/');
-        window.location.href = await response.text();
+        const response = await fetch('/api/v1/auth/google/')
+        window.location.href = await response.text()
       }
     }
   }
@@ -58,7 +58,9 @@ main {
   background-color: rgb(183, 183, 183);
   border: 2px solid rgb(183, 183, 183);
   overflow: hidden;
-  transition: background-color 0.3s, transform 0.3s; /* Smooth transition */
+  transition:
+    background-color 0.3s,
+    transform 0.3s; /* Smooth transition */
 }
 
 .login-option:hover {
