@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 import EventCard from '@/components/EventCard.vue'
 import EventDetails from '@/components/EventDetails.vue'
+import CreateEventButton from '@/components/CreateEventButton.vue'
+import { useEventStore } from '@/stores/events'
+
+const eventStore = useEventStore()
 </script>
 
 <template>
@@ -9,16 +13,16 @@ import EventDetails from '@/components/EventDetails.vue'
       <!-- Left column: List of cards -->
       <div class="cardlist col-4 p-auto card-header">
         <EventCard
-          v-for="(card, index) in cards"
-          :card="card"
+          v-for="(event, index) in eventStore.events"
+          :event="event"
           :key="index"
-          @click="selectCard(card)"
+          @click="eventStore.selectEvent(event)"
         />
+        <CreateEventButton v-if="!showPast" />
       </div>
-
       <!-- Right column: Display selected card details -->
       <div class="col-8">
-        <EventDetails v-if="selectedCard" :event="selectedCard" />
+        <EventDetails v-if="eventStore.selectedEvent" :event="eventStore.selectedEvent" />
         <div v-else>
           <p>Select an Event to see details</p>
         </div>
@@ -29,35 +33,47 @@ import EventDetails from '@/components/EventDetails.vue'
 
 <script lang="ts">
 import { type Event } from '@/models'
+import { defineComponent } from 'vue'
 
-export default {
+export default defineComponent({
+  props: {
+    showPast: Boolean
+  },
   data() {
     return {
-      cards: [] as Event[],
       selectedCard: null as Event | null
     }
   },
   methods: {
     async fetchCardData() {
       try {
-        const response = await fetch('/api/v1/event/')
+        const response = await fetch(
+          '/api/v1/event/?' +
+            new URLSearchParams({
+              past: this.showPast.toString()
+            }).toString()
+        )
         if (!response.ok) {
           throw new Error(`Error: ${response.statusText}`)
         }
         const data = await response.json()
-        this.cards = data // assuming the API returns an array of card objects
+        const eventStore = useEventStore()
+        eventStore.setEvents(data)
+        eventStore.selectedEvent = null;
       } catch (error) {
         console.error('Error fetching card data:', error)
       }
-    },
-    selectCard(card: Event) {
-      this.selectedCard = card
     }
   },
   created() {
     this.fetchCardData() // Fetch card data when the component is created
+  },
+  provide() {
+    return {
+      historyMode: this.showPast
+    }
   }
-}
+})
 </script>
 
 <style>

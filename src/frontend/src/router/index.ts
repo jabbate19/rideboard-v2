@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
-import HistoryView from '../views/HistoryView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { type UserData } from '@/models'
 
@@ -11,12 +10,8 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: () => import('../views/AboutView.vue')
+      component: HomeView,
+      props: { showPast: false }
     },
     {
       path: '/login',
@@ -26,7 +21,8 @@ const router = createRouter({
     {
       path: '/history',
       name: 'history',
-      component: HistoryView
+      component: HomeView,
+      props: { showPast: true }
     }
   ]
 })
@@ -44,9 +40,6 @@ router.beforeEach(async (to, _from, next) => {
         return jsonData
       })
       .then((jsonData) => {
-        if (jsonData.type == 'CSH') {
-          jsonData.picture = `https://profiles.csh.rit.edu/image/${jsonData.preferred_username}`
-        }
         authStore.setUser(jsonData)
         next()
       })

@@ -1,18 +1,14 @@
 <script lang="ts" setup>
 import CarRow from './CarRow.vue'
-const authStore = useAuthStore()
-const user = computed(() => authStore.user!)
+import AddCarButton from './AddCarButton.vue'
+import UpdateCarButton from './EditCarButton.vue'
 </script>
 
 <template>
-  <button
-    v-if="!cars.map((car) => car.driver).includes(user.id)"
-    type="button"
-    class="btn btn-primary"
-  >
-    Add Car
-  </button>
-  <button v-else type="button" class="btn btn-danger mb-2">Remove Car</button>
+  <div v-if="!historyMode">
+    <AddCarButton v-if="userCar == null" />
+    <UpdateCarButton v-else :car="userCar" />
+  </div>
   <table class="table">
     <thead>
       <tr>
@@ -23,30 +19,39 @@ const user = computed(() => authStore.user!)
       </tr>
     </thead>
     <tbody>
-      <CarRow
-        v-for="(car, index) in cars"
-        :eventId="eventId"
-        :car="car"
-        :userIsDriver="cars.map((car) => car.driver).includes(user.id)"
-        :key="index"
-      />
+      <CarRow v-for="(car, index) in cars" :eventId="eventId" :car="car" :key="index" />
     </tbody>
   </table>
 </template>
 
 <script lang="ts">
 import { type Car } from '@/models'
-import { defineComponent, computed } from 'vue'
+import { defineComponent, inject } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useEventStore } from '@/stores/events'
+
 
 export default defineComponent({
-  data() {
-    return {
-      cars: [] as Car[]
-    }
-  },
   props: {
     eventId: Number
+  },
+  data() {
+    return {
+      historyMode: inject("historyMode")
+    }
+  },
+  computed: {
+    cars() {
+      const eventStore = useEventStore()
+      return eventStore.selectedEvent?.cars
+    },
+    userCar() {
+      const eventStore = useEventStore()
+      const authStore = useAuthStore()
+      return eventStore.selectedEvent?.cars
+        ?.filter((car) => car.driver.id === authStore.user?.id)
+        .pop()
+    }
   },
   methods: {
     async fetchCarData() {
@@ -55,8 +60,11 @@ export default defineComponent({
         if (!response.ok) {
           throw new Error(`Error: ${response.statusText}`)
         }
-        const data = await response.json()
-        this.cars = data // assuming the API returns an array of card objects
+        const data: Car[] = await response.json()
+        const eventStore = useEventStore()
+        if (eventStore.selectedEvent) {
+          eventStore.selectedEvent.cars = data
+        }
       } catch (error) {
         console.error('Error fetching card data:', error)
       }

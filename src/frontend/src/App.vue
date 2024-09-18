@@ -24,7 +24,7 @@ import UserMenu from './components/UserMenu.vue'
     </div>
   </nav>
 
-  <RouterView />
+  <RouterView :key="$route.path" />
   <footer class="text-center">
     <a class="text-primary" href="https://github.com/jabbate19/rideboard-v2">Rideboard</a>
   </footer>

@@ -1,8 +1,6 @@
-<script lang="ts" setup>
-import { computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-const authStore = useAuthStore()
-const user = computed(() => authStore.user!)
+<script setup lang="ts">
+import JoinCarButton from './JoinCarButton.vue'
+import LeaveCarButton from './LeaveCarButton.vue'
 </script>
 
 <template>
@@ -11,29 +9,46 @@ const user = computed(() => authStore.user!)
     <p>{{ car!.comment }}</p>
     <h4>Passengers:</h4>
     <ul class="no-bullets">
-      <li v-for="(rider, index) in car!.riders" :key="index">{{ rider }}</li>
+      <li v-for="(rider, index) in car!.riders" :key="index">{{ rider.name }}</li>
     </ul>
-    <button
-      v-if="
-        car!.riders.length < car!.max_capacity && !car!.riders.includes(user.id) && !userIsDriver
-      "
-      type="button"
-      class="btn btn-primary mt-3"
-    >
-      Join Car
-    </button>
+    <LeaveCarButton v-if="userInCar" :carId="car!.id" :rider="userInCar" />
+    <JoinCarButton
+      v-else-if="car!.riders.length < car!.maxCapacity && userCanJoinCar"
+      :carId="car?.id"
+    />
   </div>
 </template>
 
 <script lang="ts">
 import { type Car } from '@/models'
 import { defineComponent, type PropType } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useEventStore } from '@/stores/events'
 
 export default defineComponent({
   props: {
     car: Object as PropType<Car>,
-    eventId: Number,
-    userIsDriver: Boolean
+    eventId: Number
+  },
+  computed: {
+    userCanJoinCar() {
+      const authStore = useAuthStore()
+      const eventStore = useEventStore()
+      return (
+        !(
+          eventStore.selectedEvent?.cars?.map((car) => car.driver.id).includes(authStore.user!.id) ||
+          eventStore.selectedEvent?.cars
+            ?.map((car) => car.riders)
+            .flat()
+            .map((rider) => rider.id)
+            .includes(authStore.user!.id)
+        )
+      )
+    },
+    userInCar() {
+      const authStore = useAuthStore()
+      return this.car?.riders.find((rider) => rider.id === authStore.user!.id)
+    }
   }
 })
 </script>

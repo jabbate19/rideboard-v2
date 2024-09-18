@@ -8,14 +8,14 @@ import CarDetail from './CarDetail.vue'
     v-bind:data-bs-target="'#carDetail' + car!.id"
     class="accordion-toggle hover-row"
   >
-    <td>{{ car!.driver }}</td>
-    <td>{{ car!.riders.length }} / {{ car!.max_capacity }}</td>
+    <td>{{ car!.driver.name }}</td>
+    <td>{{ car!.riders.length }} / {{ car!.maxCapacity }}</td>
     <td>{{ departureTime }}</td>
     <td>{{ returnTime }}</td>
   </tr>
   <tr class="hiddenRow">
     <td colspan="4" class="hiddenData">
-      <CarDetail :car="car" :eventId="eventId" :userIsDriver="userIsDriver" />
+      <CarDetail :car="car" :eventId="eventId" />
     </td>
   </tr>
 </template>
@@ -28,16 +28,15 @@ import { format } from 'date-fns'
 export default defineComponent({
   props: {
     car: Object as PropType<Car>,
-    eventId: Number,
-    userIsDriver: Boolean
+    eventId: Number
   },
   computed: {
     departureTime() {
-      let data = this.car!.departure_time.toLocaleString()
+      let data = this.car!.departureTime.toLocaleString()
       return format(data, 'MM/dd/yyyy HH:mm a')
     },
     returnTime() {
-      let data = this.car!.return_time.toLocaleString()
+      let data = this.car!.returnTime.toLocaleString()
       return format(data, 'MM/dd/yyyy HH:mm a')
     }
   }

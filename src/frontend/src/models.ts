@@ -7,20 +7,29 @@ export interface UserData {
   picture: string | undefined
 }
 
+export interface UserStub {
+  id: string,
+  name: string
+}
+
 export interface Event {
   id: number
   name: string
   location: string
-  start_time: Date
-  end_time: Date
+  startTime: Date
+  endTime: Date
+  creator: UserStub
+  cars?: Car[]
 }
+
+
 
 export interface Car {
   id: number
-  driver: string
-  riders: string[]
-  max_capacity: number
-  departure_time: Date
-  return_time: Date
+  driver: UserStub
+  riders: UserStub[]
+  maxCapacity: number
+  departureTime: Date
+  returnTime: Date
   comment: string
 }

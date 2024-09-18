@@ -1,8 +1,8 @@
 <template>
   <div class="card mb-3">
     <div class="card-body">
-      <h5 class="card-title">{{ card!.name }}</h5>
-      <h6 class="card-time">{{ startTime }}</h6>
+      <h5 class="card-title">{{ event!.name }}</h5>
+      <h6 class="card-time">{{ formattedStart }}</h6>
     </div>
   </div>
 </template>
@@ -14,12 +14,12 @@ import { format } from 'date-fns'
 
 export default defineComponent({
   props: {
-    card: Object as PropType<Event>
+    event: Object as PropType<Event>
   },
   computed: {
-    startTime() {
-      let data = this.card!.start_time.toLocaleString()
-      return format(data, 'MM/dd/yyyy HH:mm a')
+    formattedStart() {
+      let data = this.event?.startTime.toLocaleString()
+      return data ? format(data, 'MM/dd/yyyy HH:mm a') : 'N/A'
     }
   }
 })

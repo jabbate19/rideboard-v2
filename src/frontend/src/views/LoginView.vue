@@ -1,14 +1,14 @@
 <template>
   <main>
-    <div class="container h-100 text-center">
-      <div class="row justify-content-around align-items-center h-100">
-        <div class="mx-3">
+    <div class="container h-80 text-center">
+      <div class="row justify-content-around align-items-center h-80">
+        <div class="col mx-3">
           <h1>Log in with CSH</h1>
           <div class="login-option" @click="redirect('csh')">
             <img src="@/assets/csh.png" alt="CSH Login" />
           </div>
         </div>
-        <div class="mx-3">
+        <div class="col mx-3">
           <h1>Log in with Google</h1>
           <div class="login-option" @click="redirect('google')">
             <img src="@/assets/google.png" alt="Google Login" />
@@ -37,7 +37,7 @@ export default {
 
 <style>
 main {
-  height: 100vh;
+  height: 80vh;
 }
 
 .login-option img {
