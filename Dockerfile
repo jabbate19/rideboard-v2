@@ -34,6 +34,8 @@ ENV SQLX_OFFLINE true
 
 RUN cargo chef cook --release --recipe-path recipe.json
 
+COPY .sqlx .sqlx
+
 COPY Cargo* .
 
 COPY src src
