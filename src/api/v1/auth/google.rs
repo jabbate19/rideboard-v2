@@ -7,7 +7,7 @@ use reqwest::Client;
 use utoipa::{OpenApi, ToSchema};
 
 use crate::api::v1::auth::common;
-use crate::api::v1::auth::models::{GoogleUserInfo, UserInfo};
+use crate::api::v1::auth::models::{GoogleUserInfo, UserInfo, UserRealm};
 use crate::AppState;
 use actix_web::{get, web, Scope};
 use serde::Deserialize;
@@ -71,6 +71,15 @@ async fn auth(
         .json()
         .await
         .unwrap();
+
+    sqlx::query!(
+        "INSERT INTO users (id, realm, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET realm = EXCLUDED.realm, name = EXCLUDED.name;",
+        user_info.sub,
+        UserRealm::Google as _,
+        format!("{} {}", user_info.given_name, user_info.family_name)
+    )
+    .execute(&data.db)
+    .await;
 
     session.insert("login", true).unwrap();
     session.insert("userinfo", UserInfo::from(user_info)).unwrap();

@@ -10,12 +10,12 @@ FROM node:21 AS frontend
 
 WORKDIR /app
 
-COPY frontend/package.json .
-COPY frontend/package-lock.json .
+COPY src/frontend/package.json .
+COPY src/frontend/package-lock.json .
 
 RUN npm install
 
-COPY frontend .
+COPY src/frontend .
 
 RUN npm run build
 

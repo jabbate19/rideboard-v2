@@ -7,12 +7,12 @@ use actix_web::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
-use crate::auth::SessionAuth;
+use crate::{api::v1::auth::models::UserData, auth::SessionAuth};
 use crate::AppState;
 use crate::api::v1::auth::models::UserInfo;
 use utoipa::{OpenApi, ToSchema};
 
-use log::error;
+use log::{debug, error};
 
 mod rider;
 
@@ -28,7 +28,7 @@ mod rider;
         update_car,
         delete_car
     ),
-    components(schemas(CarData, CreateCar, UpdateCar))
+    components(schemas(CarData, CreateCar, UpdateCar, UserData))
 )]
 pub struct ApiDoc;
 
@@ -43,11 +43,12 @@ pub struct Car {
 }
 
 #[derive(Serialize, Deserialize, sqlx::FromRow, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CarData {
     pub id: i32,
     pub event_id: Option<i32>,
-    pub driver: String,
-    pub riders: Vec<String>,
+    pub driver: UserData,
+    pub riders: Option<Vec<UserData>>,
     pub max_capacity: i32,
     pub departure_time: DateTime<Utc>,
     pub return_time: DateTime<Utc>,
@@ -55,18 +56,21 @@ pub struct CarData {
 }
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateCar {
     pub max_capacity: i32,
     pub departure_time: DateTime<Utc>,
     pub return_time: DateTime<Utc>,
+    pub comment: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
 struct UpdateCar {
-    pub driver: Option<String>,
     pub max_capacity: Option<i32>,
     pub departure_time: Option<DateTime<Utc>>,
     pub return_time: Option<DateTime<Utc>>,
+    pub comment: String,
 }
 
 #[utoipa::path(
@@ -87,9 +91,9 @@ async fn create_car(
     let event_id: i32 = path.into_inner();
     let result = sqlx::query!(
         r#"
-        INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time) VALUES ($1, $2, $3, $4, $5) RETURNING id
+        INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time, comment) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
         "#,
-        event_id, session.get::<UserInfo>("userdata").unwrap().unwrap().id, car.max_capacity, car.departure_time, car.return_time
+        event_id, session.get::<UserInfo>("userinfo").unwrap().unwrap().id, car.max_capacity, car.departure_time, car.return_time, car.comment
     )
     .fetch_one(&data.db)
     .await;
@@ -117,7 +121,14 @@ async fn get_car(
     let (event_id, car_id) = path.into_inner();
     let result: Option<CarData> = query_as!(
         CarData,
-        r#"SELECT car.*, ARRAY_AGG(rider.name) as "riders!: Vec<String>" FROM car LEFT JOIN rider on car.id = rider.car_id WHERE event_id = $1 AND car.id = $2 GROUP BY car.id"#,
+        r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
+        (driverUser.id, driverUser.name) AS "driver!: UserData",
+        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.name) END), NULL) as "riders!: Vec<UserData>"
+        FROM car
+        JOIN users driverUser ON car.driver = driverUser.id
+        LEFT JOIN rider on car.id = rider.car_id
+        LEFT JOIN users riderUser ON rider.rider = riderUser.id
+        WHERE event_id = $1 AND car.id = $2 GROUP BY car.id, driverUser.id"#,
         event_id,
         car_id
     )
@@ -146,7 +157,17 @@ async fn get_all_cars(
     path: web::Path<i32>,
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
-    let result = query_as!(CarData, r#"SELECT car.*, ARRAY_AGG(rider.name) as "riders!: Vec<String>" FROM car LEFT JOIN rider on car.id = rider.car_id WHERE event_id = $1 GROUP BY car.id"#, event_id)
+    let result = query_as!(
+        CarData,
+        r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
+        (driverUser.id, driverUser.name) AS "driver!: UserData",
+        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.name) END), NULL) as "riders!: Vec<UserData>"
+        FROM car
+        JOIN users driverUser ON car.driver = driverUser.id
+        LEFT JOIN rider on car.id = rider.car_id
+        LEFT JOIN users riderUser ON rider.rider = riderUser.id
+        WHERE event_id = $1 GROUP BY car.id, driverUser.id"#,
+        event_id)
         .fetch_all(&data.db)
         .await;
 
@@ -175,20 +196,20 @@ async fn update_car(
     car: web::Json<UpdateCar>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-
+    debug!("{:?}", car);
     let updated = sqlx::query!(
         r#"
         UPDATE car SET
-        driver = COALESCE($1, driver),
-        max_capacity = COALESCE($2, max_capacity),
-        departure_time = COALESCE($3, departure_time),
-        return_time = COALESCE($4, return_time)
+        max_capacity = COALESCE($1, max_capacity),
+        departure_time = COALESCE($2, departure_time),
+        return_time = COALESCE($3, return_time),
+        comment = COALESCE($4, comment)
         WHERE event_id = $5 AND id = $6 RETURNING id
         "#,
-        car.driver,
         car.max_capacity,
         car.departure_time,
         car.return_time,
+        car.comment,
         event_id,
         car_id
     )
