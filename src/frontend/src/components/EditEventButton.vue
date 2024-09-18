@@ -91,11 +91,12 @@ import { useAuthStore } from '@/stores/auth'
 
 export default defineComponent({
   data() {
+    const eventStore = useEventStore()
     return {
-      eventTitle: '',
-      eventLocation: '',
-      eventStart: '',
-      eventEnd: ''
+      eventTitle: eventStore.selectedEvent!.name,
+      eventLocation: eventStore.selectedEvent!.location,
+      eventStart: eventStore.selectedEvent!.startTime,
+      eventEnd: eventStore.selectedEvent!.endTime
     }
   },
   methods: {

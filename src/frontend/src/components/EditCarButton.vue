@@ -81,24 +81,18 @@ export default defineComponent({
     car: Object as PropType<Car>
   },
   data() {
-    const eventStore = useEventStore()
-    const carDeparture = new Date(eventStore.selectedEvent!.startTime).toISOString().slice(0, 16)
-    const carReturn = new Date(eventStore.selectedEvent!.endTime).toISOString().slice(0, 16)
-
-    const carDepartureValue = ref(carDeparture)
-    const carReturnValue = ref(carReturn)
     return {
-      departureTime: carDepartureValue,
-      returnTime: carReturnValue,
-      comment: '',
-      maxCapacity: 0
+      departureTime: this.car?.departureTime,
+      returnTime: this.car?.returnTime,
+      comment: this.car?.comment,
+      maxCapacity: this.car?.maxCapacity
     }
   },
   methods: {
     async updateCar() {
       const data = {
-        departureTime: new Date(this.departureTime).toISOString(),
-        returnTime: new Date(this.returnTime).toISOString(),
+        departureTime: new Date(this.departureTime!).toISOString(),
+        returnTime: new Date(this.returnTime!).toISOString(),
         maxCapacity: this.maxCapacity,
         comment: this.comment
       }
@@ -115,10 +109,10 @@ export default defineComponent({
 
         if (response.ok) {
           const car = eventStore.selectedEvent?.cars?.find((car) => car.id == this.car!.id)
-          car!.departureTime = new Date(this.departureTime)
-          car!.returnTime = new Date(this.returnTime)
-          car!.maxCapacity = this.maxCapacity
-          car!.comment = this.comment
+          car!.departureTime = new Date(this.departureTime!)
+          car!.returnTime = new Date(this.returnTime!)
+          car!.maxCapacity = this.maxCapacity!
+          car!.comment = this.comment!
 
           
           this.closeModal()

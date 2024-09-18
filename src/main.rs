@@ -88,7 +88,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(api::scope())
             .route("/", web::get().to(serve_index))
-            .route("/about", web::get().to(serve_index))
+            .route("/history", web::get().to(serve_index))
             .route("/login", web::get().to(serve_index))
             .route("/{filename:.*}", web::get().to(serve_file))
     })
