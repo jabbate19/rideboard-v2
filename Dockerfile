@@ -31,14 +31,14 @@ WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
 
 ENV SQLX_OFFLINE true
-# Build dependencies - this is the caching Docker layer!
+
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY Cargo* .
 
 COPY src src
 
-COPY --from=frontend /app/dist/ /app/frontend/dist/
+COPY --from=frontend /app/dist/ /app/src/frontend/dist/
 
 RUN cargo build --release
 

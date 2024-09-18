@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS \"creator!: UserData\" FROM event JOIN users ON users.id = event.creator WHERE (start_time >= NOW() AND $1 = False) OR (start_time < NOW() AND $1) ORDER BY start_time ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "location",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "end_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "creator!: UserData",
+        "type_info": "Record"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "aa45f4a0c08b700822dc4b05285e11a2d00c02e857a0c73f11d3cf9c418a83dd"
+}

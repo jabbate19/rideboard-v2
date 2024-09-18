@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM rider WHERE car_id = $1 AND rider = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "02d82e80a5c3671c078ffb754a4c459308e15733ee9308a5d5761764e283ad2d"
+}
