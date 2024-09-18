@@ -10,8 +10,8 @@ import UserMenu from './components/UserMenu.vue'
       <button
         class="navbar-toggler navbar-toggler-right"
         type="button"
-        data-toggle="collapse"
-        data-target="#navbarResponsive"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarResponsive"
       >
         <span class="navbar-toggler-icon"></span>
       </button>
