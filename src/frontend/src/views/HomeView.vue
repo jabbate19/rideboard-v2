@@ -9,21 +9,36 @@ const eventStore = useEventStore()
 
 <template>
   <div class="container">
+    <button
+      v-if="screenWidth <= 576"
+      class="btn btn-primary mb-2"
+      type="button"
+      @click="returnHome()"
+    >
+      All Events
+    </button>
     <div class="row">
       <!-- Left column: List of cards -->
-      <div class="cardlist col-4 p-auto card-header">
-        <EventCard
-          v-for="(event, index) in eventStore.events"
-          :event="event"
-          :key="index"
-          @click="eventStore.selectEvent(event)"
-        />
-        <CreateEventButton v-if="!showPast" />
-      </div>
+      <Transition name="list">
+        <div v-if="show || screenWidth > 576" class="eventList col-md-4 col-sm-12">
+          <EventCard
+            v-for="(event, index) in eventStore.events"
+            :event="event"
+            :key="index"
+            @click="selectEvent(event)"
+          />
+          <CreateEventButton v-if="!showPast" />
+        </div>
+      </Transition>
       <!-- Right column: Display selected card details -->
-      <div class="col-8">
-        <EventDetails v-if="eventStore.selectedEvent" :event="eventStore.selectedEvent" />
-        <div v-else>
+      <div class="col">
+        <Transition name="details">
+          <EventDetails
+            v-if="eventStore.selectedEvent && (screenWidth > 576 || !show)"
+            :event="eventStore.selectedEvent"
+          />
+        </Transition>
+        <div v-if="eventStore.selectedEvent == null && screenWidth > 576">
           <p>Select an Event to see details</p>
         </div>
       </div>
@@ -41,8 +56,13 @@ export default defineComponent({
   },
   data() {
     return {
-      selectedCard: null as Event | null
+      selectedCard: null as Event | null,
+      show: true,
+      screenWidth: window.innerWidth
     }
+  },
+  mounted() {
+    window.addEventListener('resize', this.updateSize)
   },
   methods: {
     async fetchCardData() {
@@ -59,9 +79,24 @@ export default defineComponent({
         const data = await response.json()
         const eventStore = useEventStore()
         eventStore.setEvents(data)
-        eventStore.selectedEvent = null;
+        eventStore.selectedEvent = null
       } catch (error) {
         console.error('Error fetching card data:', error)
+      }
+    },
+    updateSize() {
+      this.screenWidth = window.innerWidth
+    },
+    selectEvent(event: Event) {
+      const eventStore = useEventStore()
+      eventStore.selectEvent(event)
+      this.show = false
+    },
+    returnHome() {
+      this.show = true
+      if (this.screenWidth < 576) {
+        const eventStore = useEventStore()
+        eventStore.selectedEvent = null
       }
     }
   },
@@ -80,6 +115,42 @@ export default defineComponent({
 .cardlist {
   height: 90vh;
   max-height: 90vh;
-  overflow: auto;
+  overflow: scroll;
+}
+
+.eventList > * {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.35s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  width: 0;
+}
+
+.details-enter-active,
+.details-leave-active {
+  transition: all 0.35s ease;
+}
+
+.details-enter-from,
+.details-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.col-4 {
+  flex: none !important;
+}
+
+svg {
+  width: 1.5em;
 }
 </style>

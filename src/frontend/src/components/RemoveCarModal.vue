@@ -1,5 +1,5 @@
 <template>
-    <div
+  <div
     class="modal fade"
     id="removeCarModal"
     tabindex="-1"

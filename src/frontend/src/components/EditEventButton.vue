@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import DeleteEventButton from './DeleteEventButton.vue';
-import DeleteEventModal from './DeleteEventModal.vue';
+import DeleteEventButton from './DeleteEventButton.vue'
+import DeleteEventModal from './DeleteEventModal.vue'
 </script>
 
 <template>
@@ -66,7 +66,7 @@ import DeleteEventModal from './DeleteEventModal.vue';
             />
           </div>
         </div>
-        <DeleteEventButton/>
+        <DeleteEventButton />
         <div class="modal-footer">
           <button
             type="button"
@@ -81,13 +81,12 @@ import DeleteEventModal from './DeleteEventModal.vue';
       </div>
     </div>
   </div>
-  <DeleteEventModal/>
+  <DeleteEventModal />
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useEventStore } from '@/stores/events'
-import { useAuthStore } from '@/stores/auth'
 
 export default defineComponent({
   data() {
@@ -119,10 +118,10 @@ export default defineComponent({
         })
 
         if (response.ok) {
-          eventStore.selectedEvent!.name = data.name;
-          eventStore.selectedEvent!.location = data.location;
-          eventStore.selectedEvent!.startTime = new Date(data.startTime);
-          eventStore.selectedEvent!.endTime = new Date(data.endTime);
+          eventStore.selectedEvent!.name = data.name
+          eventStore.selectedEvent!.location = data.location
+          eventStore.selectedEvent!.startTime = new Date(data.startTime)
+          eventStore.selectedEvent!.endTime = new Date(data.endTime)
           this.closeModal()
         } else {
           console.error('Error:', response.statusText)

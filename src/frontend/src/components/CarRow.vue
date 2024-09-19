@@ -1,21 +1,15 @@
 <script lang="ts" setup>
-import CarDetail from './CarDetail.vue'
+import CaretRight from './icons/CaretRight.vue'
 </script>
 
 <template>
-  <tr
-    data-bs-toggle="collapse"
-    v-bind:data-bs-target="'#carDetail' + car!.id"
-    class="accordion-toggle hover-row"
-  >
+  <tr>
     <td>{{ car!.driver.name }}</td>
     <td>{{ car!.riders.length }} / {{ car!.maxCapacity }}</td>
     <td>{{ departureTime }}</td>
     <td>{{ returnTime }}</td>
-  </tr>
-  <tr class="hiddenRow">
-    <td colspan="4" class="hiddenData">
-      <CarDetail :car="car" :eventId="eventId" />
+    <td>
+      <CaretRight :class="{ rotated: rotateCaret }" class="caret" />
     </td>
   </tr>
 </template>
@@ -28,7 +22,7 @@ import { format } from 'date-fns'
 export default defineComponent({
   props: {
     car: Object as PropType<Car>,
-    eventId: Number
+    rotateCaret: Boolean
   },
   computed: {
     departureTime() {
@@ -43,8 +37,18 @@ export default defineComponent({
 })
 </script>
 
-<style>
-.hiddenData {
-  padding: 0 !important;
+<style scoped>
+tr:hover > * {
+  background-color: rgb(201, 201, 201);
+  transition: background-color 0.35s ease;
+}
+
+.caret {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.rotated {
+  transform: rotate(90deg);
 }
 </style>

@@ -25,17 +25,18 @@ import UserMenu from './components/UserMenu.vue'
   </nav>
 
   <RouterView :key="$route.path" />
-  <footer class="text-center">
+  <footer class="text-center fixed-bottom">
     <a class="text-primary" href="https://github.com/jabbate19/rideboard-v2">Rideboard</a>
   </footer>
 </template>
 
 <style>
 main {
-  margin-top: 75px;
-  margin-left: 150px;
-  margin-right: 150px;
+  margin-top: 1em;
+  margin-left: 2em;
+  margin-right: 2em;
 }
+
 body {
   padding-top: 70px;
 }

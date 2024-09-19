@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import RemoveCarButton from './RemoveCarButton.vue';
-import RemoveCarModal from './RemoveCarModal.vue';
+import RemoveCarButton from './RemoveCarButton.vue'
+import RemoveCarModal from './RemoveCarModal.vue'
 </script>
 
 <template>
@@ -49,16 +49,26 @@ import RemoveCarModal from './RemoveCarModal.vue';
           </div>
           <div class="form-group">
             <label for="updateCarDeparture">Maximum Capacity</label>
-            <input v-model="maxCapacity" type="number" class="form-control" id="updateCarDeparture" />
+            <input
+              v-model="maxCapacity"
+              type="number"
+              class="form-control"
+              id="updateCarDeparture"
+            />
           </div>
           <div class="form-group">
             <label for="updateCarComments">Comments</label>
             <input v-model="comment" class="form-control" id="updateCarComments" />
           </div>
         </div>
-        <RemoveCarButton/>
+        <RemoveCarButton />
         <div class="modal-footer">
-          <button type="button" id="updateCarClose" class="btn btn-secondary" data-bs-dismiss="modal">
+          <button
+            type="button"
+            id="updateCarClose"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
             Close
           </button>
           <button type="button" class="btn btn-primary" @click="updateCar">Edit</button>
@@ -66,15 +76,13 @@ import RemoveCarModal from './RemoveCarModal.vue';
       </div>
     </div>
   </div>
-  <RemoveCarModal :car="car"/>
+  <RemoveCarModal :car="car" />
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import { useEventStore } from '@/stores/events'
-import { useAuthStore } from '@/stores/auth'
-import type { Car, UserStub } from '@/models';
-
+import type { Car } from '@/models'
 
 export default defineComponent({
   props: {
@@ -99,13 +107,16 @@ export default defineComponent({
 
       try {
         const eventStore = useEventStore()
-        const response = await fetch(`/api/v1/event/${eventStore.selectedEvent!.id}/car/${this.car!.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        })
+        const response = await fetch(
+          `/api/v1/event/${eventStore.selectedEvent!.id}/car/${this.car!.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          }
+        )
 
         if (response.ok) {
           const car = eventStore.selectedEvent?.cars?.find((car) => car.id == this.car!.id)
@@ -114,7 +125,6 @@ export default defineComponent({
           car!.maxCapacity = this.maxCapacity!
           car!.comment = this.comment!
 
-          
           this.closeModal()
         } else {
           console.error('Error:', response.statusText)

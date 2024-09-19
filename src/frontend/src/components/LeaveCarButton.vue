@@ -1,6 +1,12 @@
 <template>
-  <button type="button" class="btn btn-danger mt-3" data-bs-toggle="modal"
-  data-bs-target="#leaveCarModal">Leave Car</button>
+  <button
+    type="button"
+    class="btn btn-danger mt-3"
+    data-bs-toggle="modal"
+    data-bs-target="#leaveCarModal"
+  >
+    Leave Car
+  </button>
   <div
     class="modal fade"
     id="leaveCarModal"
@@ -39,8 +45,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import { useEventStore } from '@/stores/events'
-import { useAuthStore } from '@/stores/auth'
-import type { UserStub } from '@/models';
+import type { UserStub } from '@/models'
 
 export default defineComponent({
   props: {
@@ -59,8 +64,9 @@ export default defineComponent({
         )
 
         if (response.ok) {
-          const riders = eventStore.selectedEvent?.cars
-            ?.find((car) => car.id === this.carId)?.riders
+          const riders = eventStore.selectedEvent?.cars?.find(
+            (car) => car.id === this.carId
+          )?.riders
           riders?.splice(riders?.indexOf(this.rider!), 1)
 
           this.closeModal()

@@ -19,7 +19,7 @@ export default defineComponent({
         const response = await fetch(
           `/api/v1/event/${eventStore.selectedEvent?.id}/car/${this.carId}/rider/`,
           {
-            method: 'POST',
+            method: 'POST'
           }
         )
 
@@ -29,7 +29,7 @@ export default defineComponent({
             .pop()
             ?.riders.push({
               id: authStore.user!.id,
-              name: authStore.user!.given_name + " " + authStore.user!.family_name
+              name: authStore.user!.given_name + ' ' + authStore.user!.family_name
             })
         } else {
           console.error('Error:', response.statusText)

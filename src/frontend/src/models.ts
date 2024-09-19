@@ -8,7 +8,7 @@ export interface UserData {
 }
 
 export interface UserStub {
-  id: string,
+  id: string
   name: string
 }
 
@@ -21,8 +21,6 @@ export interface Event {
   creator: UserStub
   cars?: Car[]
 }
-
-
 
 export interface Car {
   id: number

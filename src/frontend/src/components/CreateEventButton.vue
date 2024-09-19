@@ -5,11 +5,11 @@ import IconPlus from './icons/IconPlus.vue'
 <template>
   <button
     type="button"
-    class="d-flex justify-content-center align-items-center btn btn-success w-100"
+    class="btn btn-success w-100 py-1 px-0"
     data-bs-toggle="modal"
     data-bs-target="#createEventModal"
   >
-    <IconPlus /> Create Event
+    <IconPlus />
   </button>
   <div
     class="modal fade"
@@ -124,8 +124,8 @@ export default defineComponent({
             startTime: new Date(data.startTime),
             endTime: new Date(data.endTime),
             creator: {
-                id: authStore.user!.id,
-                name: authStore.user!.given_name + " " + authStore.user!.family_name
+              id: authStore.user!.id,
+              name: authStore.user!.given_name + ' ' + authStore.user!.family_name
             }
           }
           eventStore.addEvent(newEvent)
@@ -145,3 +145,9 @@ export default defineComponent({
   }
 })
 </script>
+
+<style scoped>
+svg {
+  height: 1.5em;
+}
+</style>

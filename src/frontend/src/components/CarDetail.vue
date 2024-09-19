@@ -4,10 +4,10 @@ import LeaveCarButton from './LeaveCarButton.vue'
 </script>
 
 <template>
-  <div class="accordian-body collapse m-4" v-bind:id="'carDetail' + car!.id">
-    <h4>Driver Comment:</h4>
+  <div class="m-1">
+    <h5>Driver Comment:</h5>
     <p>{{ car!.comment }}</p>
-    <h4>Passengers:</h4>
+    <h5>Passengers:</h5>
     <ul class="no-bullets">
       <li v-for="(rider, index) in car!.riders" :key="index">{{ rider.name }}</li>
     </ul>
@@ -34,15 +34,13 @@ export default defineComponent({
     userCanJoinCar() {
       const authStore = useAuthStore()
       const eventStore = useEventStore()
-      return (
-        !(
-          eventStore.selectedEvent?.cars?.map((car) => car.driver.id).includes(authStore.user!.id) ||
-          eventStore.selectedEvent?.cars
-            ?.map((car) => car.riders)
-            .flat()
-            .map((rider) => rider.id)
-            .includes(authStore.user!.id)
-        )
+      return !(
+        eventStore.selectedEvent?.cars?.map((car) => car.driver.id).includes(authStore.user!.id) ||
+        eventStore.selectedEvent?.cars
+          ?.map((car) => car.riders)
+          .flat()
+          .map((rider) => rider.id)
+          .includes(authStore.user!.id)
       )
     },
     userInCar() {
@@ -58,5 +56,8 @@ ul.no-bullets {
   list-style-type: none; /* Remove bullets */
   padding: 0; /* Remove padding */
   margin: 0; /* Remove margins */
+}
+* {
+  overflow: hidden;
 }
 </style>

@@ -1,16 +1,22 @@
 <template>
   <main>
     <div class="container h-80 text-center">
-      <div class="row justify-content-around align-items-center h-80">
-        <div class="col mx-3">
+      <div class="row justify-content-around align-items-stretch h-80">
+        <div class="col-6">
           <h1>Log in with CSH</h1>
-          <div class="login-option" @click="redirect('csh')">
+        </div>
+        <div class="col-6">
+          <h1>Log in with Google</h1>
+        </div>
+      </div>
+      <div class="row justify-content-around align-items-stretch h-80">
+        <div class="col-6">
+          <div class="login-option align-bottom" @click="redirect('csh')">
             <img src="@/assets/csh.png" alt="CSH Login" />
           </div>
         </div>
-        <div class="col mx-3">
-          <h1>Log in with Google</h1>
-          <div class="login-option" @click="redirect('google')">
+        <div class="col-6">
+          <div class="login-option align-bottom" @click="redirect('google')">
             <img src="@/assets/google.png" alt="Google Login" />
           </div>
         </div>
@@ -44,16 +50,18 @@ main {
   position: absolute;
   top: 50%;
   left: 50%;
+  height: 50%;
+  width: auto;
   transform: translate(-50%, -50%);
-  width: 50%;
-  height: auto;
 }
 
 .login-option {
   position: relative;
   display: inline-block;
-  width: 20em; /* Adjust size as needed */
-  height: 20em; /* Adjust size as needed */
+  width: 30vw; /* Adjust size as needed */
+  max-width: 20em;
+  height: 30vw; /* Adjust size as needed */
+  max-height: 20em;
   border-radius: 50%;
   background-color: rgb(183, 183, 183);
   border: 2px solid rgb(183, 183, 183);

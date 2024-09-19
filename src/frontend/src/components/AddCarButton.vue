@@ -66,7 +66,7 @@
 import { defineComponent, ref } from 'vue'
 import { useEventStore } from '@/stores/events'
 import { useAuthStore } from '@/stores/auth'
-import type { UserStub } from '@/models';
+import type { UserStub } from '@/models'
 
 export default defineComponent({
   setup() {
@@ -113,8 +113,8 @@ export default defineComponent({
           const newCar = {
             id: result,
             driver: {
-                id: authStore.user!.id,
-                name: authStore.user!.given_name + " " + authStore.user!.family_name
+              id: authStore.user!.id,
+              name: authStore.user!.given_name + ' ' + authStore.user!.family_name
             },
             departureTime: new Date(this.departureTime),
             returnTime: new Date(this.returnTime),

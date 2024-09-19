@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import CarRow from './CarRow.vue'
+import CarDetail from './CarDetail.vue'
 import AddCarButton from './AddCarButton.vue'
 import UpdateCarButton from './EditCarButton.vue'
 </script>
@@ -9,19 +10,33 @@ import UpdateCarButton from './EditCarButton.vue'
     <AddCarButton v-if="userCar == null" />
     <UpdateCarButton v-else :car="userCar" />
   </div>
-  <table class="table">
-    <thead>
-      <tr>
-        <th scope="col">Driver</th>
-        <th scope="col">Capacity</th>
-        <th scope="col">Departure</th>
-        <th scope="col">Return</th>
-      </tr>
-    </thead>
-    <tbody>
-      <CarRow v-for="(car, index) in cars" :eventId="eventId" :car="car" :key="index" />
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Driver</th>
+          <th scope="col">Capacity</th>
+          <th scope="col">Departure</th>
+          <th scope="col">Return</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <TransitionGroup tag="tbody" name="collapse">
+        <CarRow
+          v-for="car in cars"
+          :car="car"
+          :key="car.id"
+          :rotateCaret="visible[car.id]"
+          @click="visible[car.id] = !visible[car.id]"
+        />
+        <tr v-for="car in visibleCars" :key="'Detail' + car.id">
+          <td colspan="5">
+            <CarDetail :eventId="eventId" :car="car" />
+          </td>
+        </tr>
+      </TransitionGroup>
+    </table>
+  </div>
 </template>
 
 <script lang="ts">
@@ -30,20 +45,24 @@ import { defineComponent, inject } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventStore } from '@/stores/events'
 
-
 export default defineComponent({
   props: {
     eventId: Number
   },
   data() {
     return {
-      historyMode: inject("historyMode")
+      historyMode: inject('historyMode'),
+      visible: {} as any
     }
   },
   computed: {
     cars() {
       const eventStore = useEventStore()
       return eventStore.selectedEvent?.cars
+    },
+    visibleCars() {
+      const eventStore = useEventStore()
+      return eventStore.selectedEvent?.cars?.filter((car) => this.visible[car.id])
     },
     userCar() {
       const eventStore = useEventStore()
@@ -65,6 +84,9 @@ export default defineComponent({
         if (eventStore.selectedEvent) {
           eventStore.selectedEvent.cars = data
         }
+        data.forEach((car) => {
+          this.visible[car.id] = false
+        })
       } catch (error) {
         console.error('Error fetching card data:', error)
       }
@@ -75,3 +97,27 @@ export default defineComponent({
   }
 })
 </script>
+
+<style>
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.35s ease;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.collapse-enter-active *,
+.collapse-leave-active * {
+  transition: all 0.35s ease;
+}
+
+.collapse-enter-from *,
+.collapse-leave-to * {
+  opacity: 0;
+  transform: translateY(-30px);
+}
+</style>

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import CarTable from './CarTable.vue'
 import EditEventButton from './EditEventButton.vue'
+import IconPin from './icons/IconPin.vue'
 </script>
 
 <template>
@@ -9,7 +10,9 @@ import EditEventButton from './EditEventButton.vue'
       <div>
         <h3 class="card-title">{{ event?.name }}</h3>
         <h5 class="card-text">
-          <a v-bind:href="'https://maps.google.com/?q=' + event?.location">{{ event?.location }}</a>
+          <a v-bind:href="'https://maps.google.com/?q=' + event?.location"
+            ><IconPin /> {{ event?.location }}</a
+          >
         </h5>
         <h5 class="card-text">{{ startTime }} - {{ endTime }}</h5>
       </div>
