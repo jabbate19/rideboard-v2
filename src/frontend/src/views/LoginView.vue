@@ -11,12 +11,12 @@
       </div>
       <div class="row justify-content-around align-items-stretch h-80">
         <div class="col-6">
-          <div class="login-option align-bottom" @click="redirect('csh')">
+          <div class="login-option align-bottom m-2" @click="redirect('csh')">
             <img src="@/assets/csh.png" alt="CSH Login" />
           </div>
         </div>
         <div class="col-6">
-          <div class="login-option align-bottom" @click="redirect('google')">
+          <div class="login-option align-bottom m-2" @click="redirect('google')">
             <img src="@/assets/google.png" alt="Google Login" />
           </div>
         </div>

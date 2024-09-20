@@ -25,9 +25,9 @@ import UserMenu from './components/UserMenu.vue'
   </nav>
 
   <RouterView :key="$route.path" />
-  <footer class="text-center fixed-bottom">
+  <!-- <footer class="text-center fixed-bottom">
     <a class="text-primary" href="https://github.com/jabbate19/rideboard-v2">Rideboard</a>
-  </footer>
+  </footer> -->
 </template>
 
 <style>
@@ -39,5 +39,6 @@ main {
 
 body {
   padding-top: 70px;
+  overflow: scroll;
 }
 </style>

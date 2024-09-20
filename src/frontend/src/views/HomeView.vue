@@ -121,7 +121,7 @@ export default defineComponent({
 }
 
 .noOverflow > * {
-  overflow: hidden;
+  overflow: auto;
   white-space: nowrap;
   text-overflow: ellipsis;
 }

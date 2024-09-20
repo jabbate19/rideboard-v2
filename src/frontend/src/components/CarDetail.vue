@@ -57,7 +57,4 @@ ul.no-bullets {
   padding: 0; /* Remove padding */
   margin: 0; /* Remove margins */
 }
-* {
-  overflow: hidden;
-}
 </style>
