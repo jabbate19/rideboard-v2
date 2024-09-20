@@ -89,6 +89,9 @@ async fn create_car(
     path: web::Path<i32>,
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
+    if car.max_capacity < 0 {
+        return HttpResponse::BadRequest().body("Sorry @cinnamon, you can't have negative people in your car :)")
+    }
     let result = sqlx::query!(
         r#"
         INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time, comment) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
@@ -196,7 +199,11 @@ async fn update_car(
     car: web::Json<UpdateCar>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    debug!("{:?}", car);
+    if let Some(capacity) = car.max_capacity {
+        if capacity < 0 {
+            return HttpResponse::BadRequest().body("Sorry @cinnamon, you can't have negative people in your car :)")
+        }
+    }
     let updated = sqlx::query!(
         r#"
         UPDATE car SET

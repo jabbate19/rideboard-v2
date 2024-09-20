@@ -3,22 +3,22 @@
     type="button"
     class="btn btn-danger mt-3"
     data-bs-toggle="modal"
-    data-bs-target="#leaveCarModal"
+    :data-bs-target="'#leaveCarModal' + carId!"
   >
     Leave Car
   </button>
   <div
     class="modal fade"
-    id="leaveCarModal"
+    :id="'leaveCarModal' + carId!"
     tabindex="-1"
     role="dialog"
-    aria-labelledby="leaveCarModalLabel"
+    :aria-labelledby="'leaveCarModalLabel' + carId!"
     aria-hidden="true"
   >
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h4 class="modal-title" id="leaveCarModalLabel">Leave Car</h4>
+          <h4 class="modal-title" :id="'leaveCarModalLabel' + carId!">Leave Car</h4>
           <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -29,7 +29,7 @@
         <div class="modal-footer">
           <button
             type="button"
-            id="leaveCarClose"
+            :id="'leaveCarClose' + carId!"
             class="btn btn-secondary"
             data-bs-dismiss="modal"
           >
@@ -78,7 +78,7 @@ export default defineComponent({
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('leaveCarClose')
+      const closeButton = document.getElementById('leaveCarClose' + this.carId!)
       closeButton?.click()
     }
   }
