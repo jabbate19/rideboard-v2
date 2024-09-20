@@ -11,12 +11,13 @@ import LeaveCarButton from './LeaveCarButton.vue'
     <ul class="no-bullets">
       <li v-for="(rider, index) in car!.riders" :key="index">{{ rider.name }}</li>
     </ul>
-    <LeaveCarButton v-if="userInCar" :carId="car!.id" :rider="userInCar" />
+    <LeaveCarButton v-if="userInCar" :carId="car!.id" />
     <JoinCarButton
       v-else-if="car!.riders.length < car!.maxCapacity && userCanJoinCar"
       :carId="car?.id"
     />
   </div>
+  <LeaveCarModal :carId="car!.id" :rider="userInCar" />
 </template>
 
 <script lang="ts">
@@ -24,6 +25,7 @@ import { type Car } from '@/models'
 import { defineComponent, type PropType } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventStore } from '@/stores/events'
+import LeaveCarModal from './LeaveCarModal.vue'
 
 export default defineComponent({
   props: {
