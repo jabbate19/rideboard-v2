@@ -3,6 +3,7 @@ import CarRow from './CarRow.vue'
 import CarDetail from './CarDetail.vue'
 import AddCarButton from './AddCarButton.vue'
 import UpdateCarButton from './EditCarButton.vue'
+import CarRowGroup from './CarRowGroup.vue'
 </script>
 
 <template>
@@ -22,18 +23,7 @@ import UpdateCarButton from './EditCarButton.vue'
         </tr>
       </thead>
       <TransitionGroup tag="tbody" name="collapse">
-        <CarRow
-          v-for="car in cars"
-          :car="car"
-          :key="car.id"
-          :rotateCaret="visible[car.id]"
-          @click="visible[car.id] = !visible[car.id]"
-        />
-        <tr v-for="car in visibleCars" :key="'Detail' + car.id">
-          <td colspan="5">
-            <CarDetail :eventId="eventId" :car="car" />
-          </td>
-        </tr>
+        <CarRowGroup v-for="car in cars" :car="car" :eventId="eventId" :key="car.id"/>
       </TransitionGroup>
     </table>
   </div>
@@ -52,17 +42,12 @@ export default defineComponent({
   data() {
     return {
       historyMode: inject('historyMode'),
-      visible: {} as any
     }
   },
   computed: {
     cars() {
       const eventStore = useEventStore()
       return eventStore.selectedEvent?.cars
-    },
-    visibleCars() {
-      const eventStore = useEventStore()
-      return eventStore.selectedEvent?.cars?.filter((car) => this.visible[car.id])
     },
     userCar() {
       const eventStore = useEventStore()
@@ -84,9 +69,6 @@ export default defineComponent({
         if (eventStore.selectedEvent) {
           eventStore.selectedEvent.cars = data
         }
-        data.forEach((car) => {
-          this.visible[car.id] = false
-        })
       } catch (error) {
         console.error('Error fetching card data:', error)
       }

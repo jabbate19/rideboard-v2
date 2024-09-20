@@ -10,7 +10,7 @@ const eventStore = useEventStore()
 <template>
   <div class="container">
     <button
-      v-if="screenWidth <= 576"
+      v-if="screenWidth < 768"
       class="btn btn-primary mb-2"
       type="button"
       @click="returnHome()"
@@ -19,8 +19,8 @@ const eventStore = useEventStore()
     </button>
     <div class="row">
       <!-- Left column: List of cards -->
-      <Transition name="list">
-        <div v-if="show || screenWidth > 576" class="eventList col-md-4 col-sm-12">
+      <Transition @after-leave="showDetail=true" name="list">
+        <div v-if="screenWidth >= 768 || showList" class="noOverflow col-md-4 pb-1">
           <EventCard
             v-for="(event, index) in eventStore.events"
             :event="event"
@@ -31,17 +31,15 @@ const eventStore = useEventStore()
         </div>
       </Transition>
       <!-- Right column: Display selected card details -->
-      <div class="col">
-        <Transition name="details">
-          <EventDetails
-            v-if="eventStore.selectedEvent && (screenWidth > 576 || !show)"
-            :event="eventStore.selectedEvent"
-          />
-        </Transition>
-        <div v-if="eventStore.selectedEvent == null && screenWidth > 576">
-          <p>Select an Event to see details</p>
+      <Transition @after-leave="showList=true" name="details">
+        <div class="noOverflow col-md-8 pb-1" v-if="screenWidth >= 768 || showDetail">
+          <EventDetails v-if="eventStore.selectedEvent" :event="eventStore.selectedEvent" />
+
+          <div v-else>
+            <p>Select an Event to see details</p>
+          </div>
         </div>
-      </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -57,7 +55,8 @@ export default defineComponent({
   data() {
     return {
       selectedCard: null as Event | null,
-      show: true,
+      showList: true,
+      showDetail: false,
       screenWidth: window.innerWidth
     }
   },
@@ -90,11 +89,14 @@ export default defineComponent({
     selectEvent(event: Event) {
       const eventStore = useEventStore()
       eventStore.selectEvent(event)
-      this.show = false
+      if (this.screenWidth < 768) {
+        this.showList = false
+      }
+      
     },
     returnHome() {
-      this.show = true
-      if (this.screenWidth < 576) {
+      this.showDetail = false
+      if (this.screenWidth < 768) {
         const eventStore = useEventStore()
         eventStore.selectedEvent = null
       }
@@ -118,7 +120,7 @@ export default defineComponent({
   overflow: scroll;
 }
 
-.eventList > * {
+.noOverflow > * {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -143,10 +145,10 @@ export default defineComponent({
 .details-enter-from,
 .details-leave-to {
   opacity: 0;
-  transform: translateX(-30px);
+  width: 0;
 }
 
-.col-4 {
+.col-md-4 .col-md-8 {
   flex: none !important;
 }
 
