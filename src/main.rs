@@ -1,13 +1,14 @@
-use std::env;
-
 use actix_session::storage::CookieSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
 use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer, Responder};
+use anyhow::anyhow;
+use base64::prelude::*;
 use include_dir::{include_dir, Dir};
 use log::info;
 use oauth2::basic::BasicClient;
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use std::env;
 
 mod api;
 mod auth;
@@ -51,9 +52,9 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
     dotenv::dotenv().ok();
 
-    let host = std::env::var("HOST").unwrap_or("127.0.0.1".to_string());
+    let host = env::var("HOST").unwrap_or("127.0.0.1".to_string());
     let host_inner = host.clone();
-    let port: i32 = match &std::env::var("PORT").map(|port| port.parse()) {
+    let port: i32 = match &env::var("PORT").map(|port| port.parse()) {
         Ok(Ok(p)) => *p,
         Ok(Err(_)) => 8080,
         Err(_) => 8080,
@@ -61,11 +62,19 @@ async fn main() -> std::io::Result<()> {
 
     let db_pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
+        .connect(&env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
         .await
         .expect("Failed to create pool");
 
-    let session_key = Key::generate();
+    let session_key = env::var("SESSION_KEY")
+        .map_err(|e| anyhow!("Failed to get Env Var: {}", e))
+        .and_then(|key64| {
+            BASE64_STANDARD
+                .decode(key64)
+                .map_err(|e| anyhow!("Failed to decode session key: {}", e))
+        })
+        .map(|key| Key::from(&key))
+        .unwrap_or(Key::generate());
 
     info!("Starting server at http://{host}:{port}");
     HttpServer::new(move || {

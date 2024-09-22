@@ -35,7 +35,7 @@ pub struct UserInfo {
     pub given_name: String,
     pub family_name: String,
     pub picture: String,
-    pub groups: Vec<String>
+    pub groups: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, sqlx::Type, ToSchema)]
@@ -55,7 +55,7 @@ impl From<CSHUserInfo> for UserInfo {
             given_name: user_info.given_name,
             family_name: user_info.family_name,
             picture: format!("https://profiles.csh.rit.edu/image/{}", username),
-            groups: user_info.groups
+            groups: user_info.groups,
         }
     }
 }
@@ -69,7 +69,7 @@ impl From<GoogleUserInfo> for UserInfo {
             given_name: user_info.given_name,
             family_name: user_info.family_name,
             picture: user_info.picture,
-            groups: Vec::new()
+            groups: Vec::new(),
         }
     }
 }

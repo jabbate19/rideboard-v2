@@ -1,3 +1,6 @@
+use crate::api::v1::event::UserInfo;
+use crate::auth::SessionAuth;
+use crate::AppState;
 use actix_session::Session;
 use actix_web::{
     delete, post,
@@ -7,18 +10,9 @@ use actix_web::{
 use log::error;
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
-use crate::api::v1::event::UserInfo;
-use crate::auth::SessionAuth;
-use crate::AppState;
-
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(
-        create_rider,
-        delete_rider
-    ),
-)]
+#[openapi(paths(create_rider, delete_rider))]
 pub struct ApiDoc;
 
 #[utoipa::path(
@@ -52,7 +46,7 @@ async fn create_rider(
         Err(e) => {
             error!("Failed to Add Rider: {}", e);
             HttpResponse::InternalServerError().body("Failed to create car")
-        },
+        }
     }
 }
 

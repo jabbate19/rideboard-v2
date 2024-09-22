@@ -13,13 +13,7 @@ use actix_web::{get, web, Scope};
 use serde::Deserialize;
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(
-        login,
-        auth,
-    ),
-    components(schemas(AuthRequest))
-)]
+#[openapi(paths(login, auth,), components(schemas(AuthRequest)))]
 pub(super) struct ApiDoc;
 
 #[utoipa::path(
@@ -29,7 +23,15 @@ pub(super) struct ApiDoc;
 )]
 #[get("/")]
 async fn login(data: web::Data<AppState>) -> impl Responder {
-    common::login(&data.google_oauth, Vec::from(["openid".to_string(), "profile".to_string(), "email".to_string()])).await
+    common::login(
+        &data.google_oauth,
+        Vec::from([
+            "openid".to_string(),
+            "profile".to_string(),
+            "email".to_string(),
+        ]),
+    )
+    .await
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -82,9 +84,13 @@ async fn auth(
     .await;
 
     session.insert("login", true).unwrap();
-    session.insert("userinfo", UserInfo::from(user_info)).unwrap();
+    session
+        .insert("userinfo", UserInfo::from(user_info))
+        .unwrap();
 
-    HttpResponse::Found().append_header((header::LOCATION, "/")).finish()
+    HttpResponse::Found()
+        .append_header((header::LOCATION, "/"))
+        .finish()
 }
 
 pub fn scope() -> Scope {

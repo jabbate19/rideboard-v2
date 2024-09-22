@@ -1,6 +1,6 @@
 use actix_web::{body::BoxBody, web, HttpResponse, Scope};
-use utoipa::{OpenApi};
-use utoipa_swagger_ui::{SwaggerUi};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 mod v1;
 
@@ -18,16 +18,9 @@ pub async fn open_api_spec() -> HttpResponse<BoxBody> {
 }
 
 pub fn scope() -> Scope {
-    web::scope("/api")
-        .service(v1::scope())
-        .service(
-            web::scope("/docs")
-            .route(
-                "/openapi.json",
-                 web::get().to(open_api_spec),
-             )
-            .service(
-                SwaggerUi::new("/{_:.*}").url("/api/docs/openapi.json", Default::default())
-            ),
-        )
+    web::scope("/api").service(v1::scope()).service(
+        web::scope("/docs")
+            .route("/openapi.json", web::get().to(open_api_spec))
+            .service(SwaggerUi::new("/{_:.*}").url("/api/docs/openapi.json", Default::default())),
+    )
 }

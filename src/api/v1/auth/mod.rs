@@ -1,12 +1,12 @@
+use crate::api::v1::auth::models::UserInfo;
+use crate::auth::SessionAuth;
 use actix_session::Session;
 use actix_web::{get, http::header, post, web, HttpResponse, Responder, Scope};
-use crate::auth::SessionAuth;
-use crate::api::v1::auth::models::UserInfo;
 use utoipa::OpenApi;
 
+mod common;
 mod csh;
 mod google;
-mod common;
 pub mod models;
 
 #[utoipa::path(
@@ -28,7 +28,7 @@ async fn logout(session: Session) -> impl Responder {
         (status = 200, description = "List current todo items")
     )
 )]
-#[get("/", wrap="SessionAuth")]
+#[get("/", wrap = "SessionAuth")]
 async fn get_user_data(session: Session) -> impl Responder {
     let out: Option<UserInfo> = session.get("userinfo").unwrap();
     HttpResponse::Ok().json(out)

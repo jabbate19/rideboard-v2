@@ -8,8 +8,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
-use crate::{api::v1::auth::models::UserInfo, auth::SessionAuth};
 use crate::AppState;
+use crate::{api::v1::auth::models::UserInfo, auth::SessionAuth};
 
 use utoipa::{OpenApi, ToSchema};
 
@@ -117,7 +117,7 @@ async fn get_event(
 
 #[derive(Deserialize)]
 struct EventQueryParams {
-    past: Option<bool>
+    past: Option<bool>,
 }
 
 #[utoipa::path(
@@ -126,7 +126,11 @@ struct EventQueryParams {
     )
 )]
 #[get("/", wrap = "SessionAuth")]
-async fn get_all_events(data: web::Data<AppState>, session: Session, params: web::Query<EventQueryParams>) -> impl Responder {
+async fn get_all_events(
+    data: web::Data<AppState>,
+    session: Session,
+    params: web::Query<EventQueryParams>,
+) -> impl Responder {
     let past: bool = params.past.unwrap_or(false);
 
     let result = query_as!(Event, r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE (start_time >= NOW() AND $1 = False) OR (start_time < NOW() AND $1) ORDER BY start_time ASC"#, past)

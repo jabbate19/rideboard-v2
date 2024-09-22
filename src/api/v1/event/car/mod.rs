@@ -1,3 +1,6 @@
+use crate::api::v1::auth::models::UserInfo;
+use crate::AppState;
+use crate::{api::v1::auth::models::UserData, auth::SessionAuth};
 use actix_session::Session;
 use actix_web::{
     delete, get, post, put,
@@ -7,9 +10,6 @@ use actix_web::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
-use crate::{api::v1::auth::models::UserData, auth::SessionAuth};
-use crate::AppState;
-use crate::api::v1::auth::models::UserInfo;
 use utoipa::{OpenApi, ToSchema};
 
 use log::{debug, error};
@@ -90,7 +90,8 @@ async fn create_car(
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
     if car.max_capacity < 0 {
-        return HttpResponse::BadRequest().body("Sorry @cinnamon, you can't have negative people in your car :)")
+        return HttpResponse::BadRequest()
+            .body("Sorry @cinnamon, you can't have negative people in your car :)");
     }
     let result = sqlx::query!(
         r#"
@@ -179,7 +180,7 @@ async fn get_all_cars(
         Err(e) => {
             error!("{}", e);
             HttpResponse::InternalServerError().body("Failed to get cars")
-        },
+        }
     }
 }
 
@@ -201,7 +202,8 @@ async fn update_car(
     let (event_id, car_id) = path.into_inner();
     if let Some(capacity) = car.max_capacity {
         if capacity < 0 {
-            return HttpResponse::BadRequest().body("Sorry @cinnamon, you can't have negative people in your car :)")
+            return HttpResponse::BadRequest()
+                .body("Sorry @cinnamon, you can't have negative people in your car :)");
         }
     }
     let updated = sqlx::query!(

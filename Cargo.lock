@@ -2125,6 +2125,7 @@ dependencies = [
  "actix-session",
  "actix-web",
  "anyhow",
+ "base64 0.22.1",
  "chrono",
  "dotenv",
  "env_logger",

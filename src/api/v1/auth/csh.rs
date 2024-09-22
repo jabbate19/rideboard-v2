@@ -1,7 +1,7 @@
 use actix_session::Session;
 use actix_web::http::header;
 use actix_web::{web, HttpResponse, Responder};
-use oauth2::reqwest::{async_http_client};
+use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse};
 use reqwest::Client;
 use utoipa::{OpenApi, ToSchema};
@@ -14,13 +14,7 @@ use serde::Deserialize;
 use crate::api::v1::auth::common;
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(
-        login,
-        auth,
-    ),
-    components(schemas(AuthRequest))
-)]
+#[openapi(paths(login, auth,), components(schemas(AuthRequest)))]
 pub(super) struct ApiDoc;
 
 #[utoipa::path(
@@ -30,7 +24,11 @@ pub(super) struct ApiDoc;
 )]
 #[get("/")]
 async fn login(data: web::Data<AppState>) -> impl Responder {
-    common::login(&data.csh_oauth, Vec::from(["house-service-oidc".to_string()])).await
+    common::login(
+        &data.csh_oauth,
+        Vec::from(["house-service-oidc".to_string()]),
+    )
+    .await
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -81,9 +79,13 @@ async fn auth(
     .await;
 
     session.insert("login", true).unwrap();
-    session.insert("userinfo", UserInfo::from(user_info)).unwrap();
+    session
+        .insert("userinfo", UserInfo::from(user_info))
+        .unwrap();
 
-    HttpResponse::Found().append_header((header::LOCATION, "/")).finish()
+    HttpResponse::Found()
+        .append_header((header::LOCATION, "/"))
+        .finish()
 }
 
 pub fn scope() -> Scope {
