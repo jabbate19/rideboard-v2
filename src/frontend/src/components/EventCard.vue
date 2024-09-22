@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CaretRight from './icons/CaretRight.vue';
+import CaretRight from './icons/CaretRight.vue'
 </script>
 
 <template>
@@ -9,7 +9,7 @@ import CaretRight from './icons/CaretRight.vue';
         <h5 class="card-title">{{ event!.name }}</h5>
         <h6 class="card-time">{{ formattedStart }}</h6>
       </div>
-      <CaretRight v-if="screenWidth < 768"/>
+      <CaretRight v-if="screenWidth < 768" />
     </div>
   </div>
 </template>
@@ -34,7 +34,7 @@ export default defineComponent({
   methods: {
     updateSize() {
       this.screenWidth = window.innerWidth
-    },
+    }
   },
   computed: {
     formattedStart() {

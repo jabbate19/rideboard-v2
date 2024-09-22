@@ -4,19 +4,14 @@ import CarDetail from './CarDetail.vue'
 </script>
 
 <template>
-    <CarRow
-        :car="car"
-        :key="car!.id"
-        :rotateCaret="visible"
-        @click="visible = !visible"
-    />
-    <Transition name="collapse">
-        <tr v-if="visible">
-            <td colspan="5">
-                <CarDetail :eventId="eventId" :car="car" />
-            </td>
-        </tr>
-    </Transition>
+  <CarRow :car="car" :key="car!.id" :rotateCaret="visible" @click="visible = !visible" />
+  <Transition name="collapse">
+    <tr v-if="visible">
+      <td colspan="5">
+        <CarDetail :eventId="eventId" :car="car" />
+      </td>
+    </tr>
+  </Transition>
 </template>
 
 <script lang="ts">
@@ -30,7 +25,7 @@ export default defineComponent({
   },
   data() {
     return {
-        visible: false
+      visible: false
     }
   }
 })

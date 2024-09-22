@@ -17,7 +17,6 @@ import LeaveCarButton from './LeaveCarButton.vue'
       :carId="car?.id"
     />
   </div>
-  <LeaveCarModal :carId="car!.id" :rider="userInCar" />
 </template>
 
 <script lang="ts">
@@ -25,7 +24,6 @@ import { type Car } from '@/models'
 import { defineComponent, type PropType } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventStore } from '@/stores/events'
-import LeaveCarModal from './LeaveCarModal.vue'
 
 export default defineComponent({
   props: {

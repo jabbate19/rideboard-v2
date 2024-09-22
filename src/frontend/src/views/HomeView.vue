@@ -19,7 +19,7 @@ const eventStore = useEventStore()
     </button>
     <div class="row">
       <!-- Left column: List of cards -->
-      <Transition @after-leave="showDetail=true" name="list">
+      <Transition @after-leave="showDetail = true" name="list">
         <div v-if="screenWidth >= 768 || showList" class="noOverflow col-md-4 pb-1">
           <EventCard
             v-for="(event, index) in eventStore.events"
@@ -31,7 +31,7 @@ const eventStore = useEventStore()
         </div>
       </Transition>
       <!-- Right column: Display selected card details -->
-      <Transition @after-leave="showList=true" name="details">
+      <Transition @after-leave="showList = true" name="details">
         <div class="noOverflow col-md-8 pb-1" v-if="screenWidth >= 768 || showDetail">
           <EventDetails v-if="eventStore.selectedEvent" :event="eventStore.selectedEvent" />
 
@@ -92,7 +92,6 @@ export default defineComponent({
       if (this.screenWidth < 768) {
         this.showList = false
       }
-      
     },
     returnHome() {
       this.showDetail = false

@@ -69,10 +69,15 @@ import { useAuthStore } from '@/stores/auth'
 import type { UserStub } from '@/models'
 
 export default defineComponent({
-  setup() {
+  data() {
     const eventStore = useEventStore()
-    const carDeparture = new Date(eventStore.selectedEvent!.startTime).toISOString().slice(0, 16)
-    const carReturn = new Date(eventStore.selectedEvent!.endTime).toISOString().slice(0, 16)
+    console.log(eventStore.selectedEvent!.startTime)
+    const carDeparture = new Date(new Date(eventStore.selectedEvent!.startTime).toLocaleString())
+      .toISOString()
+      .slice(0, 16)
+    const carReturn = new Date(new Date(eventStore.selectedEvent!.endTime).toLocaleString())
+      .toISOString()
+      .slice(0, 16)
 
     const carDepartureValue = ref(carDeparture)
     const carReturnValue = ref(carReturn)

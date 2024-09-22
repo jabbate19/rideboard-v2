@@ -1,5 +1,5 @@
 <template>
-    <div
+  <div
     class="modal fade"
     :id="'leaveCarModal' + carId!"
     tabindex="-1"
@@ -35,19 +35,19 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+import { defineComponent } from 'vue'
 import { useEventStore } from '@/stores/events'
-import type { UserStub } from '@/models'
+import { useAuthStore  } from '@/stores/auth';
 
 export default defineComponent({
   props: {
     carId: Number,
-    rider: Object as PropType<UserStub>
   },
   methods: {
     async leaveCar() {
       try {
         const eventStore = useEventStore()
+        const authStore = useAuthStore()
         const response = await fetch(
           `/api/v1/event/${eventStore.selectedEvent?.id}/car/${this.carId}/rider/`,
           {
@@ -58,8 +58,12 @@ export default defineComponent({
         if (response.ok) {
           const riders = eventStore.selectedEvent?.cars?.find(
             (car) => car.id === this.carId
-          )?.riders
-          riders?.splice(riders?.indexOf(this.rider!), 1)
+          )?.riders;
+          const rider = {
+            id: authStore.user!.id,
+            name: authStore.user!.given_name + " " + authStore.user!.family_name
+          };
+          riders?.splice(riders?.indexOf(rider), 1)
 
           this.closeModal()
         } else {

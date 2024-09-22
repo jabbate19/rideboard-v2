@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import CarRow from './CarRow.vue'
-import CarDetail from './CarDetail.vue'
 import AddCarButton from './AddCarButton.vue'
 import UpdateCarButton from './EditCarButton.vue'
 import CarRowGroup from './CarRowGroup.vue'
+import LeaveCarModal from './LeaveCarModal.vue'
 </script>
 
 <template>
@@ -23,10 +22,11 @@ import CarRowGroup from './CarRowGroup.vue'
         </tr>
       </thead>
       <TransitionGroup tag="tbody" name="collapse">
-        <CarRowGroup v-for="car in cars" :car="car" :eventId="eventId" :key="car.id"/>
+        <CarRowGroup v-for="car in cars" :car="car" :eventId="eventId" :key="car.id" />
       </TransitionGroup>
     </table>
   </div>
+  <LeaveCarModal v-for="car in cars" :carId="car!.id" />
 </template>
 
 <script lang="ts">
@@ -41,7 +41,7 @@ export default defineComponent({
   },
   data() {
     return {
-      historyMode: inject('historyMode'),
+      historyMode: inject('historyMode')
     }
   },
   computed: {

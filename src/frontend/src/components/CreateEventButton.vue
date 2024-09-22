@@ -101,7 +101,7 @@ export default defineComponent({
         name: this.eventTitle,
         location: this.eventLocation,
         startTime: new Date(this.eventStart).toISOString(),
-        endTime: new Date(this.eventStart).toISOString()
+        endTime: new Date(this.eventEnd).toISOString()
       }
 
       try {
