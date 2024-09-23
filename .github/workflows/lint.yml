@@ -46,9 +46,9 @@ jobs:
         working-directory: ./src/frontend
 
       - name: Run lint check
-        run: npm run lint
+        run: npm run lint-check
         working-directory: ./src/frontend
 
       - name: Run format check
-        run: npm run format -- --check
+        run: npm run format-check
         working-directory: ./src/frontend
