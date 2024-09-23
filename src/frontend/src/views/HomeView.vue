@@ -24,14 +24,12 @@ const eventStore = useEventStore()
         <!-- Left column: List of cards -->
         <Transition @after-leave="showDetail = true" name="mobile">
           <div v-if="screenWidth >= 768 || showList" class="noOverflow col-md-4 pb-1">
-            <TransitionGroup name="events">
-              <EventCard
-                v-for="(event, index) in eventStore.events"
-                :event="event"
-                :key="index"
-                @click="selectEvent(event)"
-              />
-            </TransitionGroup>
+            <EventCard
+              v-for="(event, index) in eventStore.events"
+              :event="event"
+              :key="index"
+              @click="selectEvent(event)"
+            />
             <CreateEventButton v-if="!showPast" />
           </div>
         </Transition>
@@ -150,16 +148,6 @@ export default defineComponent({
 .mobile-leave-to {
   opacity: 0;
   width: 0;
-}
-
-.events-enter-active,
-.events-leave-active {
-  transition: all 0.35s ease;
-}
-
-.events-enter-from,
-.events-leave-to {
-  transform: translateX(-30px);
 }
 
 .col-md-4 .col-md-8 {
