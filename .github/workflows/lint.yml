@@ -21,6 +21,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Make temp folder for "frontend"
+        run: mkdir src/frontend/dist
+
       - name: Run cargo clippy
         env:
           SQLX_OFFLINE: 'true'
