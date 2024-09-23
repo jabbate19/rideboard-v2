@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import UserMenu from './components/UserMenu.vue'
+import { RouterLink, RouterView } from 'vue-router';
+import UserMenu from './components/UserMenu.vue';
+import PopupGroup from './components/PopupGroup.vue';
 </script>
 
 <template>
@@ -28,6 +29,7 @@ import UserMenu from './components/UserMenu.vue'
   <footer class="text-center fixed-bottom">
     <a class="text-primary" href="https://github.com/jabbate19/rideboard-v2">Rideboard</a>
   </footer>
+  <PopupGroup />
 </template>
 
 <style>

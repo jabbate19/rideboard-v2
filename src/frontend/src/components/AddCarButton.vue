@@ -63,58 +63,63 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
-import { useEventStore } from '@/stores/events'
-import { useAuthStore } from '@/stores/auth'
-import type { UserStub } from '@/models'
+import { defineComponent, ref } from 'vue';
+import { useEventStore } from '@/stores/events';
+import { useAuthStore } from '@/stores/auth';
+import { PopupType, type UserStub } from '@/models';
+import { format } from 'date-fns';
+import { usePopupStore } from '@/stores/popup';
 
 export default defineComponent({
   data() {
-    const eventStore = useEventStore()
-    console.log(eventStore.selectedEvent!.startTime)
-    const carDeparture = new Date(new Date(eventStore.selectedEvent!.startTime).toLocaleString())
-      .toISOString()
-      .slice(0, 16)
-    const carReturn = new Date(new Date(eventStore.selectedEvent!.endTime).toLocaleString())
-      .toISOString()
-      .slice(0, 16)
+    const eventStore = useEventStore();
+    console.log(eventStore.selectedEvent!.startTime);
+    const carDeparture = format(
+      new Date(eventStore.selectedEvent!.startTime).toLocaleString(),
+      "yyyy-MM-dd'T'HH:mm:ss"
+    );
+    const carReturn = format(
+      new Date(eventStore.selectedEvent!.endTime).toLocaleString(),
+      "yyyy-MM-dd'T'HH:mm:ss"
+    );
 
-    const carDepartureValue = ref(carDeparture)
-    const carReturnValue = ref(carReturn)
+    const carDepartureValue = ref(carDeparture);
+    const carReturnValue = ref(carReturn);
     return {
       departureTime: carDepartureValue,
       returnTime: carReturnValue,
       comment: '',
       maxCapacity: 0
-    }
+    };
   },
   methods: {
     async sendData() {
       if (this.departureTime === null || this.returnTime === null) {
-        console.error('All times must be filled in.')
-        return
+        console.error('All times must be filled in.');
+        return;
       }
       const data = {
         departureTime: new Date(this.departureTime).toISOString(),
         returnTime: new Date(this.returnTime).toISOString(),
         maxCapacity: this.maxCapacity,
         comment: this.comment
-      }
-
+      };
+      const popupStore = usePopupStore();
       try {
-        const eventStore = useEventStore()
+        const eventStore = useEventStore();
+
         const response = await fetch(`/api/v1/event/${eventStore.selectedEvent?.id}/car/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(data)
-        })
+        });
 
         if (response.ok) {
-          const result = await response.json()
+          const result = await response.json();
 
-          const authStore = useAuthStore()
+          const authStore = useAuthStore();
           const newCar = {
             id: result,
             driver: {
@@ -126,20 +131,22 @@ export default defineComponent({
             maxCapacity: this.maxCapacity,
             comment: this.comment,
             riders: [] as UserStub[]
-          }
-          eventStore.addCar(newCar)
-          this.closeModal()
+          };
+          eventStore.addCar(newCar);
+          popupStore.addPopup(PopupType.Success, 'Car Added!');
+          this.closeModal();
         } else {
-          console.error('Error:', response.statusText)
+          popupStore.addPopup(PopupType.Danger, `Failed to Add Car (${response.status})`);
         }
       } catch (error) {
-        console.error('Network error:', error)
+        console.error(error);
+        popupStore.addPopup(PopupType.Danger, 'Failed to Add Car. An unknown error occured.');
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('addCarClose')
-      closeButton?.click()
+      const closeButton = document.getElementById('addCarClose');
+      closeButton?.click();
     }
   }
-})
+});
 </script>

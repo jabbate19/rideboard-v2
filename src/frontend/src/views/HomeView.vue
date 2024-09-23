@@ -1,52 +1,63 @@
 <script lang="ts" setup>
-import EventCard from '@/components/EventCard.vue'
-import EventDetails from '@/components/EventDetails.vue'
-import CreateEventButton from '@/components/CreateEventButton.vue'
-import { useEventStore } from '@/stores/events'
+import EventCard from '@/components/EventCard.vue';
+import EventDetails from '@/components/EventDetails.vue';
+import CreateEventButton from '@/components/CreateEventButton.vue';
+import { useEventStore } from '@/stores/events';
+import Loading from '@/components/LoadingWheel.vue';
 
-const eventStore = useEventStore()
+const eventStore = useEventStore();
 </script>
 
 <template>
   <div class="container">
-    <button
-      v-if="screenWidth < 768"
-      class="btn btn-primary mb-2"
-      type="button"
-      @click="returnHome()"
-    >
-      All Events
-    </button>
-    <div class="row">
-      <!-- Left column: List of cards -->
-      <Transition @after-leave="showDetail = true" name="list">
-        <div v-if="screenWidth >= 768 || showList" class="noOverflow col-md-4 pb-1">
-          <EventCard
-            v-for="(event, index) in eventStore.events"
-            :event="event"
-            :key="index"
-            @click="selectEvent(event)"
-          />
-          <CreateEventButton v-if="!showPast" />
-        </div>
-      </Transition>
-      <!-- Right column: Display selected card details -->
-      <Transition @after-leave="showList = true" name="details">
-        <div class="noOverflow col-md-8 pb-1" v-if="screenWidth >= 768 || showDetail">
-          <EventDetails v-if="eventStore.selectedEvent" :event="eventStore.selectedEvent" />
-
-          <div v-else>
-            <p>Select an Event to see details</p>
+    <Loading v-if="loading" />
+    <div v-else>
+      <button
+        v-if="screenWidth < 768"
+        class="btn btn-primary mb-2"
+        type="button"
+        @click="returnHome()"
+      >
+        All Events
+      </button>
+      <div class="row">
+        <!-- Left column: List of cards -->
+        <Transition @after-leave="showDetail = true" name="mobile">
+          <div v-if="screenWidth >= 768 || showList" class="noOverflow col-md-4 pb-1">
+            <TransitionGroup name="events">
+              <EventCard
+                v-for="(event, index) in eventStore.events"
+                :event="event"
+                :key="index"
+                @click="selectEvent(event)"
+              />
+            </TransitionGroup>
+            <CreateEventButton v-if="!showPast" />
           </div>
-        </div>
-      </Transition>
+        </Transition>
+        <!-- Right column: Display selected card details -->
+        <Transition @after-leave="showList = true" name="mobile">
+          <div class="noOverflow col-md-8 pb-1" v-if="screenWidth >= 768 || showDetail">
+            <EventDetails
+              v-if="eventStore.selectedEvent"
+              :event="eventStore.selectedEvent"
+              :key="eventStore.selectedEvent.id"
+            />
+
+            <div v-else>
+              <p>Select an Event to see details</p>
+            </div>
+          </div>
+        </Transition>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { type Event } from '@/models'
-import { defineComponent } from 'vue'
+import { PopupType, type Event } from '@/models';
+import { defineComponent } from 'vue';
+import { usePopupStore } from '@/stores/popup';
 
 export default defineComponent({
   props: {
@@ -57,59 +68,64 @@ export default defineComponent({
       selectedCard: null as Event | null,
       showList: true,
       showDetail: false,
-      screenWidth: window.innerWidth
-    }
+      screenWidth: window.innerWidth,
+      loading: true
+    };
   },
   mounted() {
-    window.addEventListener('resize', this.updateSize)
+    window.addEventListener('resize', this.updateSize);
   },
   methods: {
     async fetchCardData() {
+      const popupStore = usePopupStore();
       try {
         const response = await fetch(
           '/api/v1/event/?' +
             new URLSearchParams({
               past: this.showPast.toString()
             }).toString()
-        )
+        );
         if (!response.ok) {
-          throw new Error(`Error: ${response.statusText}`)
+          popupStore.addPopup(PopupType.Danger, `Failed to Get Events (${response.status})`);
+          return;
         }
-        const data = await response.json()
-        const eventStore = useEventStore()
-        eventStore.setEvents(data)
-        eventStore.selectedEvent = null
+        const data = await response.json();
+        const eventStore = useEventStore();
+        eventStore.setEvents(data);
+        eventStore.selectedEvent = null;
+        this.loading = false;
       } catch (error) {
-        console.error('Error fetching card data:', error)
+        console.error(error);
+        popupStore.addPopup(PopupType.Danger, 'Failed to Get Events. An unknown error occured.');
       }
     },
     updateSize() {
-      this.screenWidth = window.innerWidth
+      this.screenWidth = window.innerWidth;
     },
     selectEvent(event: Event) {
-      const eventStore = useEventStore()
-      eventStore.selectEvent(event)
+      const eventStore = useEventStore();
+      eventStore.selectEvent(event);
       if (this.screenWidth < 768) {
-        this.showList = false
+        this.showList = false;
       }
     },
     returnHome() {
-      this.showDetail = false
+      this.showDetail = false;
       if (this.screenWidth < 768) {
-        const eventStore = useEventStore()
-        eventStore.selectedEvent = null
+        const eventStore = useEventStore();
+        eventStore.selectedEvent = null;
       }
     }
   },
   created() {
-    this.fetchCardData() // Fetch card data when the component is created
+    this.fetchCardData(); // Fetch card data when the component is created
   },
   provide() {
     return {
       historyMode: this.showPast
-    }
+    };
   }
-})
+});
 </script>
 
 <style>
@@ -125,26 +141,25 @@ export default defineComponent({
   text-overflow: ellipsis;
 }
 
-.list-enter-active,
-.list-leave-active {
+.mobile-enter-active,
+.mobile-leave-active {
   transition: all 0.35s ease;
 }
 
-.list-enter-from,
-.list-leave-to {
+.mobile-enter-from,
+.mobile-leave-to {
   opacity: 0;
   width: 0;
 }
 
-.details-enter-active,
-.details-leave-active {
+.events-enter-active,
+.events-leave-active {
   transition: all 0.35s ease;
 }
 
-.details-enter-from,
-.details-leave-to {
-  opacity: 0;
-  width: 0;
+.events-enter-from,
+.events-leave-to {
+  transform: translateX(-30px);
 }
 
 .col-md-4 .col-md-8 {

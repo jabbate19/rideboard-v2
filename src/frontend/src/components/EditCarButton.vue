@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import RemoveCarButton from './RemoveCarButton.vue'
-import RemoveCarModal from './RemoveCarModal.vue'
+import RemoveCarButton from './RemoveCarButton.vue';
+import RemoveCarModal from './RemoveCarModal.vue';
 </script>
 
 <template>
@@ -80,9 +80,11 @@ import RemoveCarModal from './RemoveCarModal.vue'
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
-import { useEventStore } from '@/stores/events'
-import type { Car } from '@/models'
+import { defineComponent, type PropType } from 'vue';
+import { useEventStore } from '@/stores/events';
+import { PopupType, type Car } from '@/models';
+import { format } from 'date-fns';
+import { usePopupStore } from '@/stores/popup';
 
 export default defineComponent({
   props: {
@@ -90,11 +92,14 @@ export default defineComponent({
   },
   data() {
     return {
-      departureTime: this.car?.departureTime,
-      returnTime: this.car?.returnTime,
+      departureTime: format(
+        new Date(this.car!.departureTime.toLocaleString()),
+        "yyyy-MM-dd'T'HH:mm:ss"
+      ),
+      returnTime: format(new Date(this.car!.returnTime.toLocaleString()), "yyyy-MM-dd'T'HH:mm:ss"),
       comment: this.car?.comment,
       maxCapacity: this.car?.maxCapacity
-    }
+    };
   },
   methods: {
     async updateCar() {
@@ -103,10 +108,10 @@ export default defineComponent({
         returnTime: new Date(this.returnTime!).toISOString(),
         maxCapacity: this.maxCapacity,
         comment: this.comment
-      }
-
+      };
+      const popupStore = usePopupStore();
       try {
-        const eventStore = useEventStore()
+        const eventStore = useEventStore();
         const response = await fetch(
           `/api/v1/event/${eventStore.selectedEvent!.id}/car/${this.car!.id}`,
           {
@@ -116,27 +121,28 @@ export default defineComponent({
             },
             body: JSON.stringify(data)
           }
-        )
+        );
 
-        if (response.ok) {
-          const car = eventStore.selectedEvent?.cars?.find((car) => car.id == this.car!.id)
-          car!.departureTime = new Date(this.departureTime!)
-          car!.returnTime = new Date(this.returnTime!)
-          car!.maxCapacity = this.maxCapacity!
-          car!.comment = this.comment!
-
-          this.closeModal()
-        } else {
-          console.error('Error:', response.statusText)
+        if (!response.ok) {
+          popupStore.addPopup(PopupType.Danger, `Failed to Edit Car (${response.status})`);
+          return;
         }
+        const car = eventStore.selectedEvent?.cars?.find((car) => car.id == this.car!.id);
+        car!.departureTime = new Date(this.departureTime!);
+        car!.returnTime = new Date(this.returnTime!);
+        car!.maxCapacity = this.maxCapacity!;
+        car!.comment = this.comment!;
+        popupStore.addPopup(PopupType.Success, 'Car Updated!');
+        this.closeModal();
       } catch (error) {
-        console.error('Network error:', error)
+        console.error(error);
+        popupStore.addPopup(PopupType.Danger, 'Failed to Edit Car. An unknown error occured.');
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('updateCarClose')
-      closeButton?.click()
+      const closeButton = document.getElementById('updateCarClose');
+      closeButton?.click();
     }
   }
-})
+});
 </script>

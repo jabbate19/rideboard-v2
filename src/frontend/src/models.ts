@@ -31,3 +31,10 @@ export interface Car {
   returnTime: Date
   comment: string
 }
+
+export enum PopupType {
+  Danger = 'bg-danger',
+  Warning = 'bg-warning',
+  Success = 'bg-success',
+  Default = 'bg-primary'
+}

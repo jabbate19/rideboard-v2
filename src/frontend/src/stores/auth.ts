@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
-import { type UserData } from '@/models'
+import { defineStore } from 'pinia';
+import { type UserData } from '@/models';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -7,10 +7,10 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     setUser(userData: UserData) {
-      this.user = userData
+      this.user = userData;
     },
     clearUser() {
-      this.user = null
+      this.user = null;
     }
   }
-})
+});

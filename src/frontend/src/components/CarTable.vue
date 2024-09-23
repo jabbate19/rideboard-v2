@@ -1,16 +1,20 @@
 <script lang="ts" setup>
-import AddCarButton from './AddCarButton.vue'
-import UpdateCarButton from './EditCarButton.vue'
-import CarRowGroup from './CarRowGroup.vue'
-import LeaveCarModal from './LeaveCarModal.vue'
+import AddCarButton from './AddCarButton.vue';
+import UpdateCarButton from './EditCarButton.vue';
+import CarRowGroup from './CarRowGroup.vue';
+import LeaveCarModal from './LeaveCarModal.vue';
+import Loading from './LoadingWheel.vue';
+
+const eventStore = useEventStore();
 </script>
 
 <template>
-  <div v-if="!historyMode">
-    <AddCarButton v-if="userCar == null" />
-    <UpdateCarButton v-else :car="userCar" />
-  </div>
-  <div class="table-responsive">
+  <Loading v-if="loading" />
+  <div v-else>
+    <div v-if="!historyMode">
+      <AddCarButton v-if="userCar == null" />
+      <UpdateCarButton v-else :car="userCar" />
+    </div>
     <table class="table">
       <thead>
         <tr>
@@ -22,18 +26,24 @@ import LeaveCarModal from './LeaveCarModal.vue'
         </tr>
       </thead>
       <TransitionGroup tag="tbody" name="collapse">
-        <CarRowGroup v-for="car in cars" :car="car" :eventId="eventId" :key="car.id" />
+        <CarRowGroup
+          v-for="car in eventStore.selectedEventCars"
+          :car="car"
+          :eventId="eventId"
+          :key="car.id"
+        />
       </TransitionGroup>
     </table>
+    <LeaveCarModal v-for="car in eventStore.selectedEventCars" :carId="car!.id" :key="car!.id" />
   </div>
-  <LeaveCarModal v-for="car in cars" :carId="car!.id" />
 </template>
 
 <script lang="ts">
-import { type Car } from '@/models'
-import { defineComponent, inject } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useEventStore } from '@/stores/events'
+import { PopupType, type Car } from '@/models';
+import { defineComponent, inject } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+import { useEventStore } from '@/stores/events';
+import { usePopupStore } from '@/stores/popup';
 
 export default defineComponent({
   props: {
@@ -41,43 +51,45 @@ export default defineComponent({
   },
   data() {
     return {
-      historyMode: inject('historyMode')
-    }
+      historyMode: inject('historyMode'),
+      loading: true
+    };
   },
   computed: {
-    cars() {
-      const eventStore = useEventStore()
-      return eventStore.selectedEvent?.cars
-    },
     userCar() {
-      const eventStore = useEventStore()
-      const authStore = useAuthStore()
+      const eventStore = useEventStore();
+      const authStore = useAuthStore();
       return eventStore.selectedEvent?.cars
         ?.filter((car) => car.driver.id === authStore.user?.id)
-        .pop()
+        .pop();
     }
   },
   methods: {
     async fetchCarData() {
       try {
-        const response = await fetch(`/api/v1/event/${this.eventId}/car/`)
+        const response = await fetch(`/api/v1/event/${this.eventId}/car/`);
         if (!response.ok) {
-          throw new Error(`Error: ${response.statusText}`)
+          const popupStore = usePopupStore();
+          popupStore.addPopup(PopupType.Danger, `Failed to Get Cars (${response.status})`);
+          return;
         }
-        const data: Car[] = await response.json()
-        const eventStore = useEventStore()
+        const data: Car[] = await response.json();
+        const eventStore = useEventStore();
         if (eventStore.selectedEvent) {
-          eventStore.selectedEvent.cars = data
+          eventStore.selectedEvent.cars = data;
         }
+        this.loading = false;
       } catch (error) {
-        console.error('Error fetching card data:', error)
+        console.error(error);
+        const popupStore = usePopupStore();
+        popupStore.addPopup(PopupType.Danger, 'Failed to Get Cars. An unknown error occured.');
       }
     }
   },
   created() {
-    this.fetchCarData() // Fetch card data when the component is created
+    this.fetchCarData(); // Fetch card data when the component is created
   }
-})
+});
 </script>
 
 <style>
