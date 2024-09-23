@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import AddCarButton from './AddCarButton.vue';
-import UpdateCarButton from './EditCarButton.vue';
-import CarRowGroup from './CarRowGroup.vue';
-import LeaveCarModal from './LeaveCarModal.vue';
-import Loading from './LoadingWheel.vue';
+import AddCarButton from './AddCarButton.vue'
+import UpdateCarButton from './EditCarButton.vue'
+import CarRowGroup from './CarRowGroup.vue'
+import LeaveCarModal from './LeaveCarModal.vue'
+import Loading from './LoadingWheel.vue'
 
-const eventStore = useEventStore();
+const eventStore = useEventStore()
 </script>
 
 <template>
@@ -25,25 +25,25 @@ const eventStore = useEventStore();
           <th scope="col"></th>
         </tr>
       </thead>
-      <TransitionGroup tag="tbody" name="collapse">
+      <tbody>
         <CarRowGroup
           v-for="car in eventStore.selectedEventCars"
           :car="car"
           :eventId="eventId"
           :key="car.id"
         />
-      </TransitionGroup>
+      </tbody>
     </table>
     <LeaveCarModal v-for="car in eventStore.selectedEventCars" :carId="car!.id" :key="car!.id" />
   </div>
 </template>
 
 <script lang="ts">
-import { PopupType, type Car } from '@/models';
-import { defineComponent, inject } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useEventStore } from '@/stores/events';
-import { usePopupStore } from '@/stores/popup';
+import { PopupType, type Car } from '@/models'
+import { defineComponent, inject } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useEventStore } from '@/stores/events'
+import { usePopupStore } from '@/stores/popup'
 
 export default defineComponent({
   props: {
@@ -53,43 +53,43 @@ export default defineComponent({
     return {
       historyMode: inject('historyMode'),
       loading: true
-    };
+    }
   },
   computed: {
     userCar() {
-      const eventStore = useEventStore();
-      const authStore = useAuthStore();
+      const eventStore = useEventStore()
+      const authStore = useAuthStore()
       return eventStore.selectedEvent?.cars
         ?.filter((car) => car.driver.id === authStore.user?.id)
-        .pop();
+        .pop()
     }
   },
   methods: {
     async fetchCarData() {
       try {
-        const response = await fetch(`/api/v1/event/${this.eventId}/car/`);
+        const response = await fetch(`/api/v1/event/${this.eventId}/car/`)
         if (!response.ok) {
-          const popupStore = usePopupStore();
-          popupStore.addPopup(PopupType.Danger, `Failed to Get Cars (${response.status})`);
-          return;
+          const popupStore = usePopupStore()
+          popupStore.addPopup(PopupType.Danger, `Failed to Get Cars (${response.status})`)
+          return
         }
-        const data: Car[] = await response.json();
-        const eventStore = useEventStore();
+        const data: Car[] = await response.json()
+        const eventStore = useEventStore()
         if (eventStore.selectedEvent) {
-          eventStore.selectedEvent.cars = data;
+          eventStore.selectedEvent.cars = data
         }
-        this.loading = false;
+        this.loading = false
       } catch (error) {
-        console.error(error);
-        const popupStore = usePopupStore();
-        popupStore.addPopup(PopupType.Danger, 'Failed to Get Cars. An unknown error occured.');
+        console.error(error)
+        const popupStore = usePopupStore()
+        popupStore.addPopup(PopupType.Danger, 'Failed to Get Cars. An unknown error occured.')
       }
     }
   },
   created() {
-    this.fetchCarData(); // Fetch card data when the component is created
+    this.fetchCarData() // Fetch card data when the component is created
   }
-});
+})
 </script>
 
 <style>

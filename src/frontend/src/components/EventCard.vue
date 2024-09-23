@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CaretRight from './icons/CaretRight.vue';
+import CaretRight from './icons/CaretRight.vue'
 </script>
 
 <template>
@@ -15,9 +15,9 @@ import CaretRight from './icons/CaretRight.vue';
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue';
-import { type Event } from '@/models';
-import { format } from 'date-fns';
+import { defineComponent, type PropType } from 'vue'
+import { type Event } from '@/models'
+import { format } from 'date-fns'
 
 export default defineComponent({
   props: {
@@ -26,23 +26,23 @@ export default defineComponent({
   data() {
     return {
       screenWidth: window.innerWidth
-    };
+    }
   },
   mounted() {
-    window.addEventListener('resize', this.updateSize);
+    window.addEventListener('resize', this.updateSize)
   },
   methods: {
     updateSize() {
-      this.screenWidth = window.innerWidth;
+      this.screenWidth = window.innerWidth
     }
   },
   computed: {
     formattedStart() {
-      let data = this.event?.startTime.toLocaleString();
-      return data ? format(data, 'MM/dd/yyyy hh:mm a') : 'N/A';
+      let data = this.event?.startTime.toLocaleString()
+      return data ? format(data, 'MM/dd/yyyy hh:mm a') : 'N/A'
     }
   }
-});
+})
 </script>
 
 <style scoped>

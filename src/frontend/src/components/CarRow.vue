@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import CaretRight from './icons/CaretRight.vue';
+import CaretRight from './icons/CaretRight.vue'
 </script>
 
 <template>
@@ -15,9 +15,9 @@ import CaretRight from './icons/CaretRight.vue';
 </template>
 
 <script lang="ts">
-import { type Car } from '@/models';
-import { defineComponent, type PropType } from 'vue';
-import { format } from 'date-fns';
+import { type Car } from '@/models'
+import { defineComponent, type PropType } from 'vue'
+import { format } from 'date-fns'
 
 export default defineComponent({
   props: {
@@ -26,15 +26,15 @@ export default defineComponent({
   },
   computed: {
     departureTime() {
-      let data = this.car!.departureTime.toLocaleString();
-      return format(data, 'MM/dd/yyyy hh:mm a');
+      let data = this.car!.departureTime.toLocaleString()
+      return format(data, 'MM/dd/yyyy hh:mm a')
     },
     returnTime() {
-      let data = this.car!.returnTime.toLocaleString();
-      return format(data, 'MM/dd/yyyy hh:mm a');
+      let data = this.car!.returnTime.toLocaleString()
+      return format(data, 'MM/dd/yyyy hh:mm a')
     }
   }
-});
+})
 </script>
 
 <style scoped>

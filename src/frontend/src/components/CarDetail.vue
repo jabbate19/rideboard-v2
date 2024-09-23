@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import JoinCarButton from './JoinCarButton.vue';
-import LeaveCarButton from './LeaveCarButton.vue';
+import JoinCarButton from './JoinCarButton.vue'
+import LeaveCarButton from './LeaveCarButton.vue'
 </script>
 
 <template>
@@ -20,10 +20,10 @@ import LeaveCarButton from './LeaveCarButton.vue';
 </template>
 
 <script lang="ts">
-import { type Car } from '@/models';
-import { defineComponent, type PropType } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useEventStore } from '@/stores/events';
+import { type Car } from '@/models'
+import { defineComponent, type PropType } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useEventStore } from '@/stores/events'
 
 export default defineComponent({
   props: {
@@ -32,8 +32,8 @@ export default defineComponent({
   },
   computed: {
     userCanJoinCar() {
-      const authStore = useAuthStore();
-      const eventStore = useEventStore();
+      const authStore = useAuthStore()
+      const eventStore = useEventStore()
       return !(
         eventStore.selectedEvent?.cars?.map((car) => car.driver.id).includes(authStore.user!.id) ||
         eventStore.selectedEvent?.cars
@@ -41,14 +41,14 @@ export default defineComponent({
           .flat()
           .map((rider) => rider.id)
           .includes(authStore.user!.id)
-      );
+      )
     },
     userInCar() {
-      const authStore = useAuthStore();
-      return this.car?.riders.find((rider) => rider.id === authStore.user!.id);
+      const authStore = useAuthStore()
+      return this.car?.riders.find((rider) => rider.id === authStore.user!.id)
     }
   }
-});
+})
 </script>
 
 <style>

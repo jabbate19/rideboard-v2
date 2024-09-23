@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import IconPlus from './icons/IconPlus.vue';
+import IconPlus from './icons/IconPlus.vue'
 </script>
 
 <template>
@@ -82,11 +82,11 @@ import IconPlus from './icons/IconPlus.vue';
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
-import { useEventStore } from '@/stores/events';
-import { useAuthStore } from '@/stores/auth';
-import { usePopupStore } from '@/stores/popup';
-import { PopupType } from '@/models';
+import { defineComponent } from 'vue'
+import { useEventStore } from '@/stores/events'
+import { useAuthStore } from '@/stores/auth'
+import { usePopupStore } from '@/stores/popup'
+import { PopupType } from '@/models'
 
 export default defineComponent({
   data() {
@@ -95,33 +95,42 @@ export default defineComponent({
       eventLocation: '',
       eventStart: '',
       eventEnd: ''
-    };
+    }
   },
   methods: {
     async createEvent() {
-      const data = {
-        name: this.eventTitle,
-        location: this.eventLocation,
-        startTime: new Date(this.eventStart).toISOString(),
-        endTime: new Date(this.eventEnd).toISOString()
-      };
-      const popupStore = usePopupStore();
+      const popupStore = usePopupStore()
       try {
+        if (
+          this.eventTitle.length == 0 ||
+          this.eventLocation.length == 0 ||
+          this.eventStart.length == 0 ||
+          this.eventEnd.length == 0
+        ) {
+          popupStore.addPopup(PopupType.Danger, 'Please fill in all fields.')
+          return
+        }
+        const data = {
+          name: this.eventTitle,
+          location: this.eventLocation,
+          startTime: new Date(this.eventStart).toISOString(),
+          endTime: new Date(this.eventEnd).toISOString()
+        }
         const response = await fetch('/api/v1/event/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(data)
-        });
+        })
 
         if (!response.ok) {
-          popupStore.addPopup(PopupType.Danger, `Failed to Create Event (${response.status})`);
-          return;
+          popupStore.addPopup(PopupType.Danger, `Failed to Create Event (${response.status})`)
+          return
         }
-        const result = await response.json();
-        const eventStore = useEventStore();
-        const authStore = useAuthStore();
+        const result = await response.json()
+        const eventStore = useEventStore()
+        const authStore = useAuthStore()
         const newEvent = {
           id: result,
           name: data.name,
@@ -132,23 +141,23 @@ export default defineComponent({
             id: authStore.user!.id,
             name: authStore.user!.given_name + ' ' + authStore.user!.family_name
           }
-        };
-        eventStore.addEvent(newEvent);
-        eventStore.selectEvent(newEvent);
+        }
+        eventStore.addEvent(newEvent)
+        eventStore.selectEvent(newEvent)
 
-        popupStore.addPopup(PopupType.Success, 'Event Created!');
-        this.closeModal();
+        popupStore.addPopup(PopupType.Success, 'Event Created!')
+        this.closeModal()
       } catch (error) {
-        console.error(error);
-        popupStore.addPopup(PopupType.Danger, 'Failed to Create Event. An unknown error occured.');
+        console.error(error)
+        popupStore.addPopup(PopupType.Danger, 'Failed to Create Event. An unknown error occured.')
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('createEventClose');
-      closeButton?.click();
+      const closeButton = document.getElementById('createEventClose')
+      closeButton?.click()
     }
   }
-});
+})
 </script>
 
 <style scoped>

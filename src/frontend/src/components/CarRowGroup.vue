@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import CarRow from './CarRow.vue';
-import CarDetail from './CarDetail.vue';
+import CarRow from './CarRow.vue'
+import CarDetail from './CarDetail.vue'
 </script>
 
 <template>
   <CarRow :car="car" :key="car!.id" :rotateCaret="visible" @click="visible = !visible" />
   <Transition name="collapse">
-    <tr v-if="visible">
+    <tr v-if="visible" :key="'Detail' + car!.id">
       <td colspan="5">
         <CarDetail :eventId="eventId" :car="car" />
       </td>
@@ -15,8 +15,8 @@ import CarDetail from './CarDetail.vue';
 </template>
 
 <script lang="ts">
-import { type Car } from '@/models';
-import { defineComponent, type PropType } from 'vue';
+import { type Car } from '@/models'
+import { defineComponent, type PropType } from 'vue'
 
 export default defineComponent({
   props: {
@@ -26,9 +26,9 @@ export default defineComponent({
   data() {
     return {
       visible: false
-    };
+    }
   }
-});
+})
 </script>
 
 <style>

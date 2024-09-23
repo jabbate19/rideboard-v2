@@ -21,15 +21,15 @@
 </template>
 
 <script lang="ts" setup>
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@/stores/auth'
 
-import { computed } from 'vue';
-const authStore = useAuthStore();
+import { computed } from 'vue'
+const authStore = useAuthStore()
 
-const userData = computed(() => authStore.user!);
+const userData = computed(() => authStore.user!)
 
 const logout = async () => {
-  await fetch('/api/v1/auth/logout', { method: 'POST' });
-  window.location.href = '/login';
-};
+  await fetch('/api/v1/auth/logout', { method: 'POST' })
+  window.location.href = '/login'
+}
 </script>

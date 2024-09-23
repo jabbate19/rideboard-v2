@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import DeleteEventButton from './DeleteEventButton.vue';
-import DeleteEventModal from './DeleteEventModal.vue';
+import DeleteEventButton from './DeleteEventButton.vue'
+import DeleteEventModal from './DeleteEventModal.vue'
 </script>
 
 <template>
@@ -85,15 +85,15 @@ import DeleteEventModal from './DeleteEventModal.vue';
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
-import { useEventStore } from '@/stores/events';
-import { format } from 'date-fns';
-import { usePopupStore } from '@/stores/popup';
-import { PopupType } from '@/models';
+import { defineComponent } from 'vue'
+import { useEventStore } from '@/stores/events'
+import { format } from 'date-fns'
+import { usePopupStore } from '@/stores/popup'
+import { PopupType } from '@/models'
 
 export default defineComponent({
   data() {
-    const eventStore = useEventStore();
+    const eventStore = useEventStore()
     return {
       eventTitle: eventStore.selectedEvent!.name,
       eventLocation: eventStore.selectedEvent!.location,
@@ -105,46 +105,55 @@ export default defineComponent({
         new Date(eventStore.selectedEvent!.endTime.toLocaleString()),
         "yyyy-MM-dd'T'HH:mm:ss"
       )
-    };
+    }
   },
   methods: {
     async editEvent() {
-      const data = {
-        name: this.eventTitle,
-        location: this.eventLocation,
-        startTime: new Date(this.eventStart).toISOString(),
-        endTime: new Date(this.eventStart).toISOString()
-      };
-      const popupStore = usePopupStore();
+      const popupStore = usePopupStore()
+      if (
+        this.eventTitle.length == 0 ||
+        this.eventLocation.length == 0 ||
+        this.eventStart.length == 0 ||
+        this.eventEnd.length == 0
+      ) {
+        popupStore.addPopup(PopupType.Danger, 'Please fill in all fields.')
+        return
+      }
       try {
-        const eventStore = useEventStore();
+        const data = {
+          name: this.eventTitle,
+          location: this.eventLocation,
+          startTime: new Date(this.eventStart).toISOString(),
+          endTime: new Date(this.eventStart).toISOString()
+        }
+        const eventStore = useEventStore()
         const response = await fetch(`/api/v1/event/${eventStore.selectedEvent!.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(data)
-        });
+        })
 
         if (!response.ok) {
-          popupStore.addPopup(PopupType.Danger, `Failed to Edit Event (${response.status})`);
-          return;
+          popupStore.addPopup(PopupType.Danger, `Failed to Edit Event (${response.status})`)
+          return
         }
-        eventStore.selectedEvent!.name = data.name;
-        eventStore.selectedEvent!.location = data.location;
-        eventStore.selectedEvent!.startTime = new Date(data.startTime);
-        eventStore.selectedEvent!.endTime = new Date(data.endTime);
-        popupStore.addPopup(PopupType.Success, 'Event Updated!');
-        this.closeModal();
+        eventStore.selectedEvent!.name = data.name
+        eventStore.selectedEvent!.location = data.location
+        eventStore.selectedEvent!.startTime = new Date(data.startTime)
+        eventStore.selectedEvent!.endTime = new Date(data.endTime)
+        popupStore.addPopup(PopupType.Success, 'Event Updated!')
+        this.closeModal()
       } catch (error) {
-        console.error(error);
-        popupStore.addPopup(PopupType.Danger, 'Failed to Edit Event. An unknown error occured.');
+        console.error(error)
+        popupStore.addPopup(PopupType.Danger, 'Failed to Edit Event. An unknown error occured.')
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('editEventClose');
-      closeButton?.click();
+      const closeButton = document.getElementById('editEventClose')
+      closeButton?.click()
     }
   }
-});
+})
 </script>

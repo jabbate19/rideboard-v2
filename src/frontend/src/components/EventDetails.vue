@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import CarTable from './CarTable.vue';
-import EditEventButton from './EditEventButton.vue';
-import IconPin from './icons/IconPin.vue';
+import CarTable from './CarTable.vue'
+import EditEventButton from './EditEventButton.vue'
+import IconPin from './icons/IconPin.vue'
 </script>
 
 <template>
@@ -29,10 +29,10 @@ import IconPin from './icons/IconPin.vue';
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue';
-import { type Event } from '@/models';
-import { format } from 'date-fns';
-import { useAuthStore } from '@/stores/auth';
+import { defineComponent, type PropType } from 'vue'
+import { type Event } from '@/models'
+import { format } from 'date-fns'
+import { useAuthStore } from '@/stores/auth'
 
 export default defineComponent({
   props: {
@@ -40,17 +40,17 @@ export default defineComponent({
   },
   computed: {
     startTime() {
-      let data = this.event!.startTime.toLocaleString();
-      return format(data, 'LLLL dd, yyyy hh:mm a');
+      let data = this.event!.startTime.toLocaleString()
+      return format(data, 'LLLL dd, yyyy hh:mm a')
     },
     endTime() {
-      let data = this.event!.endTime.toLocaleString();
-      return format(data, 'LLLL dd, yyyy hh:mm a');
+      let data = this.event!.endTime.toLocaleString()
+      return format(data, 'LLLL dd, yyyy hh:mm a')
     },
     userOwnsEvent() {
-      const authStore = useAuthStore();
-      return this.event!.creator.id === authStore.user!.id;
+      const authStore = useAuthStore()
+      return this.event!.creator.id === authStore.user!.id
     }
   }
-});
+})
 </script>

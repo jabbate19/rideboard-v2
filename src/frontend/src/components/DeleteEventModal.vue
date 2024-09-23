@@ -35,38 +35,38 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
-import { useEventStore } from '@/stores/events';
-import { usePopupStore } from '@/stores/popup';
-import { PopupType } from '@/models';
+import { defineComponent } from 'vue'
+import { useEventStore } from '@/stores/events'
+import { usePopupStore } from '@/stores/popup'
+import { PopupType } from '@/models'
 
 export default defineComponent({
   methods: {
     async removeEvent() {
-      const popupStore = usePopupStore();
+      const popupStore = usePopupStore()
       try {
-        const eventStore = useEventStore();
-        const response = await fetch(`/api/v1/event/${eventStore.selectedEvent?.id}`, {
+        const eventStore = useEventStore()
+        const response = await fetch(`/api/v1/event/${eventStore.selectedEvent!.id}`, {
           method: 'DELETE'
-        });
+        })
 
         if (!response.ok) {
-          popupStore.addPopup(PopupType.Danger, `Failed to Delete Event (${response.status})`);
-          return;
+          popupStore.addPopup(PopupType.Danger, `Failed to Delete Event (${response.status})`)
+          return
         }
-        eventStore.removeEvent(eventStore.selectedEvent);
-        eventStore.selectedEvent = null;
-        popupStore.addPopup(PopupType.Success, 'Event Deleted!');
-        this.closeModal();
+        eventStore.removeEvent(eventStore.selectedEvent)
+        eventStore.selectedEvent = null
+        popupStore.addPopup(PopupType.Success, 'Event Deleted!')
+        this.closeModal()
       } catch (error) {
-        console.error(error);
-        popupStore.addPopup(PopupType.Danger, 'Failed to Delete Event. An unknown error occured.');
+        console.error(error)
+        popupStore.addPopup(PopupType.Danger, 'Failed to Delete Event. An unknown error occured.')
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('deleteEventClose');
-      closeButton?.click();
+      const closeButton = document.getElementById('deleteEventClose')
+      closeButton?.click()
     }
   }
-});
+})
 </script>

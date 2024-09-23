@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { usePopupStore } from '@/stores/popup';
-import Popup from './PopupCard.vue';
+import { usePopupStore } from '@/stores/popup'
+import Popup from './PopupCard.vue'
 
-const popupStore = usePopupStore();
+const popupStore = usePopupStore()
 </script>
 
 <template>
   <div class="d-flex flex-column-reverse justify-content-end popup-container">
     <TransitionGroup name="popup">
       <Popup
-        v-for="(popup, index) in popupStore.popups"
+        v-for="popup in popupStore.popups"
         :alertType="popup.alertType"
         :key="popup.uuid"
         @click="popupStore.deletePopup(popup.uuid)"
-        :style="{ bottom: `${10 + index}%` }"
         >{{ popup.text }}</Popup
       >
     </TransitionGroup>
@@ -21,9 +20,9 @@ const popupStore = usePopupStore();
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent } from 'vue'
 
-export default defineComponent({});
+export default defineComponent({})
 </script>
 
 <style>
@@ -32,6 +31,7 @@ export default defineComponent({});
   right: 5%;
   bottom: 10%;
   width: 15%;
+  z-index: 1100;
 }
 
 @media (max-width: 768px) {
