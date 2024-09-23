@@ -27,7 +27,7 @@ export default defineComponent({})
 
 <style>
 .popup-container {
-  position: absolute;
+  position: fixed;
   right: 5%;
   bottom: 10%;
   width: 15%;
