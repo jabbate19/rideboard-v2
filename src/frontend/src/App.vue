@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import UserMenu from './components/UserMenu.vue'
-import PopupGroup from './components/PopupGroup.vue'
+import { RouterLink, RouterView } from 'vue-router';
+import UserMenu from './components/UserMenu.vue';
+import PopupGroup from './components/PopupGroup.vue';
 </script>
 
 <template>

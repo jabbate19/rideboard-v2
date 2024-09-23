@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import EventCard from '@/components/EventCard.vue'
-import EventDetails from '@/components/EventDetails.vue'
-import CreateEventButton from '@/components/CreateEventButton.vue'
-import { useEventStore } from '@/stores/events'
-import Loading from '@/components/LoadingWheel.vue'
+import EventCard from '@/components/EventCard.vue';
+import EventDetails from '@/components/EventDetails.vue';
+import CreateEventButton from '@/components/CreateEventButton.vue';
+import { useEventStore } from '@/stores/events';
+import Loading from '@/components/LoadingWheel.vue';
 
-const eventStore = useEventStore()
+const eventStore = useEventStore();
 </script>
 
 <template>
@@ -53,9 +53,9 @@ const eventStore = useEventStore()
 </template>
 
 <script lang="ts">
-import { PopupType, type Event } from '@/models'
-import { defineComponent } from 'vue'
-import { usePopupStore } from '@/stores/popup'
+import { PopupType, type Event } from '@/models';
+import { defineComponent } from 'vue';
+import { usePopupStore } from '@/stores/popup';
 
 export default defineComponent({
   props: {
@@ -68,62 +68,62 @@ export default defineComponent({
       showDetail: false,
       screenWidth: window.innerWidth,
       loading: true
-    }
+    };
   },
   mounted() {
-    window.addEventListener('resize', this.updateSize)
+    window.addEventListener('resize', this.updateSize);
   },
   methods: {
     async fetchCardData() {
-      const popupStore = usePopupStore()
+      const popupStore = usePopupStore();
       try {
         const response = await fetch(
           '/api/v1/event/?' +
             new URLSearchParams({
               past: this.showPast.toString()
             }).toString()
-        )
+        );
         if (!response.ok) {
-          popupStore.addPopup(PopupType.Danger, `Failed to Get Events (${response.status})`)
-          return
+          popupStore.addPopup(PopupType.Danger, `Failed to Get Events (${response.status})`);
+          return;
         }
-        const data = await response.json()
-        const eventStore = useEventStore()
-        eventStore.setEvents(data)
-        eventStore.selectedEvent = null
-        this.loading = false
+        const data = await response.json();
+        const eventStore = useEventStore();
+        eventStore.setEvents(data);
+        eventStore.selectedEvent = null;
+        this.loading = false;
       } catch (error) {
-        console.error(error)
-        popupStore.addPopup(PopupType.Danger, 'Failed to Get Events. An unknown error occured.')
+        console.error(error);
+        popupStore.addPopup(PopupType.Danger, 'Failed to Get Events. An unknown error occured.');
       }
     },
     updateSize() {
-      this.screenWidth = window.innerWidth
+      this.screenWidth = window.innerWidth;
     },
     selectEvent(event: Event) {
-      const eventStore = useEventStore()
-      eventStore.selectEvent(event)
+      const eventStore = useEventStore();
+      eventStore.selectEvent(event);
       if (this.screenWidth < 768) {
-        this.showList = false
+        this.showList = false;
       }
     },
     returnHome() {
-      this.showDetail = false
+      this.showDetail = false;
       if (this.screenWidth < 768) {
-        const eventStore = useEventStore()
-        eventStore.selectedEvent = null
+        const eventStore = useEventStore();
+        eventStore.selectedEvent = null;
       }
     }
   },
   created() {
-    this.fetchCardData() // Fetch card data when the component is created
+    this.fetchCardData(); // Fetch card data when the component is created
   },
   provide() {
     return {
       historyMode: this.showPast
-    }
+    };
   }
-})
+});
 </script>
 
 <style>

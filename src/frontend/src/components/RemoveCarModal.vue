@@ -35,10 +35,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
-import { useEventStore } from '@/stores/events'
-import { PopupType, type Car } from '@/models'
-import { usePopupStore } from '@/stores/popup'
+import { defineComponent, type PropType } from 'vue';
+import { useEventStore } from '@/stores/events';
+import { PopupType, type Car } from '@/models';
+import { usePopupStore } from '@/stores/popup';
 
 export default defineComponent({
   props: {
@@ -46,33 +46,33 @@ export default defineComponent({
   },
   methods: {
     async removeCar() {
-      const popupStore = usePopupStore()
+      const popupStore = usePopupStore();
       try {
-        const eventStore = useEventStore()
+        const eventStore = useEventStore();
         const response = await fetch(
           `/api/v1/event/${eventStore.selectedEvent?.id}/car/${this.car?.id}`,
           {
             method: 'DELETE'
           }
-        )
+        );
 
         if (!response.ok) {
-          popupStore.addPopup(PopupType.Danger, `Failed to Remove Car (${response.status})`)
-          return
+          popupStore.addPopup(PopupType.Danger, `Failed to Remove Car (${response.status})`);
+          return;
         }
 
-        eventStore.removeCar(this.car!)
-        popupStore.addPopup(PopupType.Success, 'Your car has been removed!')
-        this.closeModal()
+        eventStore.removeCar(this.car!);
+        popupStore.addPopup(PopupType.Success, 'Your car has been removed!');
+        this.closeModal();
       } catch (error) {
-        console.error(error)
-        popupStore.addPopup(PopupType.Danger, 'Failed to Remove Car. An unknown error occured.')
+        console.error(error);
+        popupStore.addPopup(PopupType.Danger, 'Failed to Remove Car. An unknown error occured.');
       }
     },
     closeModal() {
-      const closeButton = document.getElementById('removeCarClose')
-      closeButton?.click()
+      const closeButton = document.getElementById('removeCarClose');
+      closeButton?.click();
     }
   }
-})
+});
 </script>

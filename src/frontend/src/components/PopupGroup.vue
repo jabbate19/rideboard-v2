@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { usePopupStore } from '@/stores/popup'
-import Popup from './PopupCard.vue'
+import { usePopupStore } from '@/stores/popup';
+import Popup from './PopupCard.vue';
 
-const popupStore = usePopupStore()
+const popupStore = usePopupStore();
 </script>
 
 <template>
@@ -20,9 +20,9 @@ const popupStore = usePopupStore()
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent } from 'vue';
 
-export default defineComponent({})
+export default defineComponent({});
 </script>
 
 <style>

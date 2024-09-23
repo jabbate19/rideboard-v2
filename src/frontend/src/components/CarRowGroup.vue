@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import CarRow from './CarRow.vue'
-import CarDetail from './CarDetail.vue'
+import CarRow from './CarRow.vue';
+import CarDetail from './CarDetail.vue';
 </script>
 
 <template>
@@ -15,8 +15,8 @@ import CarDetail from './CarDetail.vue'
 </template>
 
 <script lang="ts">
-import { type Car } from '@/models'
-import { defineComponent, type PropType } from 'vue'
+import { type Car } from '@/models';
+import { defineComponent, type PropType } from 'vue';
 
 export default defineComponent({
   props: {
@@ -26,9 +26,9 @@ export default defineComponent({
   data() {
     return {
       visible: false
-    }
+    };
   }
-})
+});
 </script>
 
 <style>

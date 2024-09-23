@@ -30,15 +30,15 @@ export default {
   methods: {
     async redirect(provider: string) {
       if (provider === 'csh') {
-        const response = await fetch('/api/v1/auth/csh/')
-        window.location.href = await response.text()
+        const response = await fetch('/api/v1/auth/csh/');
+        window.location.href = await response.text();
       } else if (provider === 'google') {
-        const response = await fetch('/api/v1/auth/google/')
-        window.location.href = await response.text()
+        const response = await fetch('/api/v1/auth/google/');
+        window.location.href = await response.text();
       }
     }
   }
-}
+};
 </script>
 
 <style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PopupType } from '@/models'
+import { type PopupType } from '@/models';
 </script>
 
 <template>
@@ -7,14 +7,14 @@ import { type PopupType } from '@/models'
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+import { defineComponent, type PropType } from 'vue';
 
 export default defineComponent({
   props: {
     uuid: String,
     alertType: String as PropType<PopupType>
   }
-})
+});
 </script>
 
 <style scoped>
