@@ -8,8 +8,8 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use log::error;
-use serde::{Deserialize, Serialize};
-use utoipa::{OpenApi, ToSchema};
+use sqlx::query;
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(paths(create_rider, delete_rider))]
@@ -30,13 +30,24 @@ async fn create_rider(
     session: Session,
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
-    let (_event_id, car_id) = path.into_inner();
+    let (event_id, car_id) = path.into_inner();
+    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
+
+    let check = query!(
+        r#"SELECT COUNT(*) as count FROM (SELECT id FROM car WHERE event_id = $1 AND driver = $2 UNION SELECT rider.car_id FROM rider JOIN car ON rider.car_id = car.id WHERE car.event_id = $1 AND rider.rider = $2)"#,
+        event_id, user_id
+    ).fetch_one(&data.db).await.unwrap();
+
+    if check.count.unwrap() > 0 {
+        return HttpResponse::BadRequest().body("User is already in a car.");
+    }
+
     let result = sqlx::query!(
         r#"
         INSERT INTO rider (car_id, rider) VALUES ($1, $2)
         "#,
         car_id,
-        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
+        user_id
     )
     .execute(&data.db)
     .await;

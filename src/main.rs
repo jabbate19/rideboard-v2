@@ -12,7 +12,7 @@ use std::env;
 
 mod api;
 mod auth;
-mod pings;
+//mod pings; // Undo this when developing it
 
 #[derive(Clone)]
 struct AppState {

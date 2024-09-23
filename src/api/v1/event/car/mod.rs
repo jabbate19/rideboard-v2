@@ -9,10 +9,10 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::query_as;
+use sqlx::{query, query_as};
 use utoipa::{OpenApi, ToSchema};
 
-use log::{debug, error};
+use log::error;
 
 mod rider;
 
@@ -89,15 +89,25 @@ async fn create_car(
     path: web::Path<i32>,
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
+    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
     if car.max_capacity < 0 {
         return HttpResponse::BadRequest()
             .body("Sorry @cinnamon, you can't have negative people in your car :)");
     }
+    let check = query!(
+        r#"SELECT COUNT(*) as count FROM (SELECT id FROM car WHERE event_id = $1 AND driver = $2 UNION SELECT rider.car_id FROM rider JOIN car ON rider.car_id = car.id WHERE car.event_id = $1 AND rider.rider = $2)"#,
+        event_id, user_id
+    ).fetch_one(&data.db).await.unwrap();
+
+    if check.count.unwrap() > 0 {
+        return HttpResponse::BadRequest().body("User is already in a car.");
+    }
+
     let result = sqlx::query!(
         r#"
         INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time, comment) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
         "#,
-        event_id, session.get::<UserInfo>("userinfo").unwrap().unwrap().id, car.max_capacity, car.departure_time, car.return_time, car.comment
+        event_id, user_id, car.max_capacity, car.departure_time, car.return_time, car.comment
     )
     .fetch_one(&data.db)
     .await;
@@ -117,11 +127,7 @@ async fn create_car(
     )
 )]
 #[get("/{car_id}", wrap = "SessionAuth")]
-async fn get_car(
-    data: web::Data<AppState>,
-    session: Session,
-    path: web::Path<(i32, i32)>,
-) -> impl Responder {
+async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
     let result: Option<CarData> = query_as!(
         CarData,
@@ -155,11 +161,7 @@ async fn get_car(
     )
 )]
 #[get("/", wrap = "SessionAuth")]
-async fn get_all_cars(
-    data: web::Data<AppState>,
-    session: Session,
-    path: web::Path<i32>,
-) -> impl Responder {
+async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
     let event_id: i32 = path.into_inner();
     let result = query_as!(
         CarData,
@@ -213,21 +215,22 @@ async fn update_car(
         departure_time = COALESCE($2, departure_time),
         return_time = COALESCE($3, return_time),
         comment = COALESCE($4, comment)
-        WHERE event_id = $5 AND id = $6 RETURNING id
+        WHERE event_id = $5 AND id = $6 AND driver = $7 RETURNING id
         "#,
         car.max_capacity,
         car.departure_time,
         car.return_time,
         car.comment,
         event_id,
-        car_id
+        car_id,
+        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
     )
     .fetch_optional(&data.db)
     .await;
 
     match updated {
         Ok(Some(_)) => HttpResponse::Ok().body("Car updated successfully"),
-        Ok(None) => HttpResponse::NotFound().body("Car not found"),
+        Ok(None) => HttpResponse::NotFound().body("Car not found or you are not the driver."),
         Err(_) => HttpResponse::InternalServerError().body("Failed to update car"),
     }
 }
@@ -249,16 +252,17 @@ async fn delete_car(
     let (event_id, car_id) = path.into_inner();
 
     let deleted = sqlx::query!(
-        "DELETE FROM car WHERE event_id = $1 AND id = $2 RETURNING id",
+        "DELETE FROM car WHERE event_id = $1 AND id = $2 AND driver = $3 RETURNING id",
         event_id,
-        car_id
+        car_id,
+        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
     )
     .fetch_optional(&data.db)
     .await;
 
     match deleted {
         Ok(Some(_)) => HttpResponse::Ok().body("Car deleted"),
-        Ok(None) => HttpResponse::NotFound().body("Car not found"),
+        Ok(None) => HttpResponse::NotFound().body("Car not found or you are not the driver."),
         Err(_) => HttpResponse::InternalServerError().body("Failed to delete car"),
     }
 }

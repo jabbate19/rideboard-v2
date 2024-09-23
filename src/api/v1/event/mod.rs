@@ -1,3 +1,4 @@
+use crate::api::v1::auth::models::UserInfo;
 use actix_session::Session;
 use actix_web::{
     delete, get, post, put,
@@ -8,8 +9,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::query_as;
 
+use crate::auth::SessionAuth;
 use crate::AppState;
-use crate::{api::v1::auth::models::UserInfo, auth::SessionAuth};
 
 use utoipa::{OpenApi, ToSchema};
 
@@ -94,11 +95,7 @@ async fn create_event(
     )
 )]
 #[get("/{event_id}", wrap = "SessionAuth")]
-async fn get_event(
-    data: web::Data<AppState>,
-    session: Session,
-    path: web::Path<i32>,
-) -> impl Responder {
+async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
     let event_id = path.into_inner();
     let result: Option<Event> = query_as!(
             Event,
@@ -128,7 +125,6 @@ struct EventQueryParams {
 #[get("/", wrap = "SessionAuth")]
 async fn get_all_events(
     data: web::Data<AppState>,
-    session: Session,
     params: web::Query<EventQueryParams>,
 ) -> impl Responder {
     let past: bool = params.past.unwrap_or(false);
@@ -164,20 +160,22 @@ async fn update_event(
         location = COALESCE($2, location),
         start_time = COALESCE($3, start_time),
         end_time = COALESCE($4, end_time)
-        WHERE id = $5 RETURNING id
+        WHERE id = $5 AND creator = $6
+        RETURNING id
         "#,
         event.name,
         event.location,
         event.start_time,
         event.end_time,
-        event_id
+        event_id,
+        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
     )
     .fetch_optional(&data.db)
     .await;
 
     match updated {
         Ok(Some(_)) => HttpResponse::Ok().body("Event updated successfully"),
-        Ok(None) => HttpResponse::NotFound().body("Event not found"),
+        Ok(None) => HttpResponse::NotFound().body("Event not found or you are not the creator."),
         Err(_) => HttpResponse::InternalServerError().body("Failed to update event"),
     }
 }
@@ -195,13 +193,17 @@ async fn delete_event(
 ) -> impl Responder {
     let event_id = path.into_inner();
 
-    let deleted = sqlx::query!("DELETE FROM event WHERE id = $1 RETURNING id", event_id)
-        .fetch_optional(&data.db)
-        .await;
+    let deleted = sqlx::query!(
+        "DELETE FROM event WHERE id = $1 AND creator = $2 RETURNING id",
+        event_id,
+        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
+    )
+    .fetch_optional(&data.db)
+    .await;
 
     match deleted {
         Ok(Some(_)) => HttpResponse::Ok().body("Event deleted"),
-        Ok(None) => HttpResponse::NotFound().body("Event not found"),
+        Ok(None) => HttpResponse::NotFound().body("Event not found or you are not the creator."),
         Err(_) => HttpResponse::InternalServerError().body("Failed to delete event"),
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM event WHERE id = $1 RETURNING id",
+  "query": "DELETE FROM event WHERE id = $1 AND creator = $2 RETURNING id",
   "describe": {
     "columns": [
       {
@@ -11,12 +11,13 @@
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Int4",
+        "Text"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "40901d716c75136d6fb2bf60c6dc19c67dd744ab3b8225005afe36ccb74bd491"
+  "hash": "47d04e0acd95c6675cd4d5415321ac476243289d42ccb2c6ba5c35b32bf63986"
 }

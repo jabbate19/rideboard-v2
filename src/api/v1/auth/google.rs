@@ -1,16 +1,16 @@
+use crate::api::v1::auth::common;
+use crate::api::v1::auth::models::UserRealm;
+use crate::api::v1::auth::models::{GoogleUserInfo, UserInfo};
+use crate::AppState;
 use actix_session::Session;
 use actix_web::http::header;
+use actix_web::{get, web, Scope};
 use actix_web::{HttpResponse, Responder};
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse};
 use reqwest::Client;
-use utoipa::{OpenApi, ToSchema};
-
-use crate::api::v1::auth::common;
-use crate::api::v1::auth::models::{GoogleUserInfo, UserInfo, UserRealm};
-use crate::AppState;
-use actix_web::{get, web, Scope};
 use serde::Deserialize;
+use utoipa::{OpenApi, ToSchema};
 
 #[derive(OpenApi)]
 #[openapi(paths(login, auth,), components(schemas(AuthRequest)))]
@@ -37,7 +37,7 @@ async fn login(data: web::Data<AppState>) -> impl Responder {
 #[derive(Deserialize, ToSchema)]
 pub struct AuthRequest {
     code: String,
-    state: String,
+    _state: String,
 }
 
 #[utoipa::path(
@@ -81,7 +81,7 @@ async fn auth(
         format!("{} {}", user_info.given_name, user_info.family_name)
     )
     .execute(&data.db)
-    .await;
+    .await.unwrap();
 
     session.insert("login", true).unwrap();
     session

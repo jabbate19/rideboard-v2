@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM car WHERE event_id = $1 AND id = $2 RETURNING id",
+  "query": "DELETE FROM car WHERE event_id = $1 AND id = $2 AND driver = $3 RETURNING id",
   "describe": {
     "columns": [
       {
@@ -12,12 +12,13 @@
     "parameters": {
       "Left": [
         "Int4",
-        "Int4"
+        "Int4",
+        "Text"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "f75b9810062cfc9509c96fc289f0f039194865d02f6abc03662c16fcf147b3e6"
+  "hash": "4e674fb9370edd9c1b50f774406e8bcb575747135c9adccb9a2e1ea881e14963"
 }

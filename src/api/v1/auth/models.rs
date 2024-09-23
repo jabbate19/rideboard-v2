@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "user_realm", rename_all = "lowercase")]
 pub enum UserRealm {
-    CSH,
+    Csh,
     Google,
 }
 
