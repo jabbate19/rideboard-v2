@@ -1,0 +1,54 @@
+name: Lint and Format Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  backend-lint:
+    name: Backend Lint/Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Run cargo clippy
+        env:
+          SQLX_OFFLINE: 'true'
+        run: cargo clippy -- -D warnings
+
+      - name: Run format check
+        run: cargo fmt --check
+
+  frontend-lint:
+    name: Frontend Lint/Format Chechk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Run lint check
+        run: npm run lint
+        working-directory: ./src/frontend
+
+      - name: Run format check
+        run: npm run format -- --check
+        working-directory: ./src/frontend
