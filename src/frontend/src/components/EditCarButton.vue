@@ -122,7 +122,7 @@ export default defineComponent({
           this.returnTime,
           this.maxCapacity,
           this.riders,
-          eventStore.selectedEventCars!.filter((car) => car.id != this.car!.id)
+          eventStore.selectedEventCars!.filter((car) => car.id !== this.car!.id)
         );
         if (validate.length != 0) {
           validate.forEach((issue) => popupStore.addPopup(PopupType.Danger, issue));
@@ -151,7 +151,7 @@ export default defineComponent({
           popupStore.addPopup(PopupType.Danger, `Failed to Edit Car (${response.status})`);
           return;
         }
-        const car = eventStore.selectedEvent?.cars?.find((car) => car.id == this.car!.id);
+        const car = eventStore.selectedEvent?.cars?.find((car) => car.id === this.car!.id);
         car!.departureTime = new Date(this.departureTime!);
         car!.returnTime = new Date(this.returnTime!);
         car!.maxCapacity = this.maxCapacity!;
