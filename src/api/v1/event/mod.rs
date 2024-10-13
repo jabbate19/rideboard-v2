@@ -116,13 +116,20 @@ async fn create_event(
 async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
     let event_id = path.into_inner();
     let result: Option<Event> = query_as!(
-            Event,
-            r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.realm, users.name, users.email) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE event.id = $1"#,
-            event_id
-        )
-        .fetch_optional(&data.db)
-        .await
-        .unwrap_or(None);
+        Event,
+        r#"
+            SELECT
+            event.id, event.name, event.location, event.start_time, event.end_time,
+            (users.id, users.realm, users.name, users.email) AS "creator!: UserData"
+            FROM event
+            JOIN users ON users.id = event.creator
+            WHERE event.id = $1
+            "#,
+        event_id
+    )
+    .fetch_optional(&data.db)
+    .await
+    .unwrap_or(None);
 
     match result {
         Some(user) => HttpResponse::Ok().json(user),
@@ -147,9 +154,21 @@ async fn get_all_events(
 ) -> impl Responder {
     let past: bool = params.past.unwrap_or(false);
 
-    let result = query_as!(Event, r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.realm::text, users.name, users.email) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1) ORDER BY start_time ASC"#, past)
-        .fetch_all(&data.db)
-        .await;
+    let result = query_as!(
+        Event,
+        r#"
+        SELECT
+        event.id, event.name, event.location, event.start_time, event.end_time,
+        (users.id, users.realm::text, users.name, users.email) AS "creator!: UserData"
+        FROM event
+        JOIN users ON users.id = event.creator
+        WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1)
+        ORDER BY start_time ASC
+        "#,
+        past
+    )
+    .fetch_all(&data.db)
+    .await;
 
     match result {
         Ok(events) => HttpResponse::Ok().json(events),

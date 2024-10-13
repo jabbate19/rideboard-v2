@@ -80,10 +80,7 @@ fn validate_car(car: &CreateCar, user: &String, other_cars: Vec<CarData>) -> Vec
     if car.riders.len() > (car.max_capacity as usize) {
         out.push("You have too many riders for your capacity.".to_string());
     }
-    if car
-        .riders
-        .contains(user)
-    {
+    if car.riders.contains(user) {
         out.push("You cannot be a rider in your own car.".to_string());
     }
     let other_car_members: Vec<String> = other_cars
@@ -128,7 +125,11 @@ async fn create_car(
         CarData,
         r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
         (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
-        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
+        ARRAY_REMOVE(ARRAY_AGG(
+            CASE WHEN riderUser.id IS NOT NULL
+            THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email)
+            END
+        ), NULL) as "riders!: Vec<UserData>"
         FROM car
         JOIN users driverUser ON car.driver = driverUser.id
         LEFT JOIN rider on car.id = rider.car_id
@@ -146,20 +147,30 @@ async fn create_car(
 
     let record = query!(
         r#"
-        INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time, comment) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
+        INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time, comment)
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
         "#,
-        event_id, user_id, car.max_capacity, car.departure_time, car.return_time, car.comment
+        event_id,
+        user_id,
+        car.max_capacity,
+        car.departure_time,
+        car.return_time,
+        car.comment
     )
     .fetch_one(&mut *tx)
-    .await.unwrap();
-    
+    .await
+    .unwrap();
+
     let _ = query!(
         r#"
         INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
         "#,
         record.id,
         &car.riders
-    ).execute(&mut *tx).await.unwrap();
+    )
+    .execute(&mut *tx)
+    .await
+    .unwrap();
     tx.commit().await.unwrap();
     HttpResponse::Ok().json(record.id)
 }
@@ -179,7 +190,11 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
         CarData,
         r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
         (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
-        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
+        ARRAY_REMOVE(ARRAY_AGG(
+            CASE WHEN riderUser.id IS NOT NULL
+            THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email)
+            END
+        ), NULL) as "riders!: Vec<UserData>"
         FROM car
         JOIN users driverUser ON car.driver = driverUser.id
         LEFT JOIN rider on car.id = rider.car_id
@@ -213,7 +228,11 @@ async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
         CarData,
         r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
         (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
-        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
+        ARRAY_REMOVE(ARRAY_AGG(
+            CASE WHEN riderUser.id IS NOT NULL
+            THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email)
+            END
+        ), NULL) as "riders!: Vec<UserData>"
         FROM car
         JOIN users driverUser ON car.driver = driverUser.id
         LEFT JOIN rider on car.id = rider.car_id
@@ -254,7 +273,11 @@ async fn update_car(
         CarData,
         r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
         (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
-        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
+        ARRAY_REMOVE(ARRAY_AGG(
+            CASE WHEN riderUser.id IS NOT NULL
+            THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email)
+            END
+        ), NULL) as "riders!: Vec<UserData>"
         FROM car
         JOIN users driverUser ON car.driver = driverUser.id
         LEFT JOIN rider on car.id = rider.car_id
@@ -290,8 +313,10 @@ async fn update_car(
     .await;
 
     match updated {
-        Ok(Some(_)) => {},
-        Ok(None) => return HttpResponse::NotFound().body("Car not found or you are not the driver."),
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return HttpResponse::NotFound().body("Car not found or you are not the driver.")
+        }
         Err(_) => return HttpResponse::InternalServerError().body("Failed to update car"),
     }
 
@@ -299,15 +324,24 @@ async fn update_car(
     let current_riders: Vec<String> = query!(
         r#"DELETE FROM rider WHERE car_id = $1 RETURNING rider"#,
         car_id
-    ).fetch_all(&mut *tx).await.unwrap().iter().map(|record| record.rider.clone()).collect();
-    
+    )
+    .fetch_all(&mut *tx)
+    .await
+    .unwrap()
+    .iter()
+    .map(|record| record.rider.clone())
+    .collect();
+
     let _ = query!(
         r#"
         INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
         "#,
         car_id,
         &car.riders
-    ).execute(&mut *tx).await.unwrap();
+    )
+    .execute(&mut *tx)
+    .await
+    .unwrap();
     tx.commit().await.unwrap();
 
     HttpResponse::Ok().body("Car updated successfully")

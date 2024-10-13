@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT COUNT(*) as count\n        FROM (\n            SELECT id FROM car\n            WHERE event_id = $1 AND driver = $2 \n            UNION\n            SELECT rider.car_id \n            FROM rider \n            JOIN car ON rider.car_id = car.id \n            WHERE car.event_id = $1 AND rider.rider = $2\n        ) AS data",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6925f6336488799fe9e01ee31dab3b1f1a3aed7a62559c656807e349e2bd7f0f"
+}

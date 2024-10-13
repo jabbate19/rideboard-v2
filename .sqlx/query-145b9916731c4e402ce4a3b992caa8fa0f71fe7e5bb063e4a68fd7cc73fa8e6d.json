@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,\n        (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS \"driver!: UserData\",\n        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as \"riders!: Vec<UserData>\"\n        FROM car\n        JOIN users driverUser ON car.driver = driverUser.id\n        LEFT JOIN rider on car.id = rider.car_id\n        LEFT JOIN users riderUser ON rider.rider = riderUser.id\n        WHERE event_id = $1 GROUP BY car.id, driverUser.id",
+  "query": "SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,\n        (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS \"driver!: UserData\",\n        ARRAY_REMOVE(ARRAY_AGG(\n            CASE WHEN riderUser.id IS NOT NULL\n            THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email)\n            END\n        ), NULL) as \"riders!: Vec<UserData>\"\n        FROM car\n        JOIN users driverUser ON car.driver = driverUser.id\n        LEFT JOIN rider on car.id = rider.car_id\n        LEFT JOIN users riderUser ON rider.rider = riderUser.id\n        WHERE event_id = $1 AND car_id != $2 GROUP BY car.id, driverUser.id",
   "describe": {
     "columns": [
       {
@@ -46,6 +46,7 @@
     ],
     "parameters": {
       "Left": [
+        "Int4",
         "Int4"
       ]
     },
@@ -60,5 +61,5 @@
       null
     ]
   },
-  "hash": "a87c144dbb5bde5926030430bbb88bf7fb824f9306fe50f432064244b18b8882"
+  "hash": "145b9916731c4e402ce4a3b992caa8fa0f71fe7e5bb063e4a68fd7cc73fa8e6d"
 }

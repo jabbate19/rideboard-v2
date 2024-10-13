@@ -34,9 +34,23 @@ async fn create_rider(
     let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
 
     let check = query!(
-        r#"SELECT COUNT(*) as count FROM (SELECT id FROM car WHERE event_id = $1 AND driver = $2 UNION SELECT rider.car_id FROM rider JOIN car ON rider.car_id = car.id WHERE car.event_id = $1 AND rider.rider = $2) AS data"#,
-        event_id, user_id
-    ).fetch_one(&data.db).await.unwrap();
+        r#"
+        SELECT COUNT(*) as count
+        FROM (
+            SELECT id FROM car
+            WHERE event_id = $1 AND driver = $2 
+            UNION
+            SELECT rider.car_id 
+            FROM rider 
+            JOIN car ON rider.car_id = car.id 
+            WHERE car.event_id = $1 AND rider.rider = $2
+        ) AS data"#,
+        event_id,
+        user_id
+    )
+    .fetch_one(&data.db)
+    .await
+    .unwrap();
 
     if check.count.unwrap() > 0 {
         return HttpResponse::BadRequest().body("User is already in a car.");
