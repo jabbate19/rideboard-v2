@@ -13,7 +13,7 @@ const eventStore = useEventStore();
     <Loading v-if="loading" />
     <div v-else>
       <button
-        v-if="screenWidth < 768"
+        v-if="screenStore.mobile"
         class="btn btn-primary mb-2"
         type="button"
         @click="returnHome()"
@@ -23,7 +23,7 @@ const eventStore = useEventStore();
       <div class="row">
         <!-- Left column: List of cards -->
         <Transition @after-leave="showDetail = true" name="mobile">
-          <div v-if="screenWidth >= 768 || showList" class="noOverflow col-md-4 pb-1">
+          <div v-if="!screenStore.mobile || showList" class="noOverflow col-md-4 pb-1">
             <EventCard
               v-for="(event, index) in eventStore.events"
               :event="event"
@@ -35,7 +35,7 @@ const eventStore = useEventStore();
         </Transition>
         <!-- Right column: Display selected card details -->
         <Transition @after-leave="showList = true" name="mobile">
-          <div class="noOverflow col-md-8 pb-1" v-if="screenWidth >= 768 || showDetail">
+          <div class="noOverflow col-md-8 pb-1" v-if="!screenStore.mobile || showDetail">
             <EventDetails
               v-if="eventStore.selectedEvent"
               :event="eventStore.selectedEvent"
@@ -56,22 +56,20 @@ const eventStore = useEventStore();
 import { PopupType, type Event } from '@/models';
 import { defineComponent } from 'vue';
 import { usePopupStore } from '@/stores/popup';
+import { useScreenStore } from '@/stores/screen';
 
 export default defineComponent({
   props: {
     showPast: Boolean
   },
   data() {
+    let screenStore = useScreenStore();
     return {
-      selectedCard: null as Event | null,
       showList: true,
       showDetail: false,
-      screenWidth: window.innerWidth,
+      screenStore,
       loading: true
     };
-  },
-  mounted() {
-    window.addEventListener('resize', this.updateSize);
   },
   methods: {
     async fetchCardData() {
@@ -97,19 +95,16 @@ export default defineComponent({
         popupStore.addPopup(PopupType.Danger, 'Failed to Get Events. An unknown error occured.');
       }
     },
-    updateSize() {
-      this.screenWidth = window.innerWidth;
-    },
     selectEvent(event: Event) {
       const eventStore = useEventStore();
       eventStore.selectEvent(event);
-      if (this.screenWidth < 768) {
+      if (this.screenStore.width < 768) {
         this.showList = false;
       }
     },
     returnHome() {
       this.showDetail = false;
-      if (this.screenWidth < 768) {
+      if (this.screenStore.width < 768) {
         const eventStore = useEventStore();
         eventStore.selectedEvent = null;
       }

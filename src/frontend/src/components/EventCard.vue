@@ -9,7 +9,7 @@ import CaretRight from './icons/CaretRight.vue';
         <h5 class="card-title">{{ event!.name }}</h5>
         <h6 class="card-time">{{ formattedStart }}</h6>
       </div>
-      <CaretRight v-if="screenWidth < 768" />
+      <CaretRight v-if="screenStore.mobile" />
     </div>
   </div>
 </template>
@@ -18,23 +18,17 @@ import CaretRight from './icons/CaretRight.vue';
 import { defineComponent, type PropType } from 'vue';
 import { type Event } from '@/models';
 import { format } from 'date-fns';
+import { useScreenStore } from '@/stores/screen';
 
 export default defineComponent({
   props: {
     event: Object as PropType<Event>
   },
   data() {
+    let screenStore = useScreenStore();
     return {
-      screenWidth: window.innerWidth
+      screenStore
     };
-  },
-  mounted() {
-    window.addEventListener('resize', this.updateSize);
-  },
-  methods: {
-    updateSize() {
-      this.screenWidth = window.innerWidth;
-    }
   },
   computed: {
     formattedStart() {

@@ -22,7 +22,7 @@ A Proper Rideboard.
 
 `cd $PROJECT_ROOT`
 
-`docker run -it --rm -e 5432:5432 -d ./src/migrations:/docker-entrypoint-initdb.d -e POSTGRES_USER=rideboard -e POSTGRES_DATABASE=rideboard -e POSTGRES_PASSWORD=supersecurepassword postgres`
+`docker run -it --rm -p 5432:5432 -v ./src/migrations:/docker-entrypoint-initdb.d -e POSTGRES_USER=rideboard -e POSTGRES_DATABASE=rideboard -e POSTGRES_PASSWORD=supersecurepassword postgres`
 
 #### Setup .env
 

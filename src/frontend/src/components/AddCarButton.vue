@@ -73,7 +73,6 @@ import { usePopupStore } from '@/stores/popup';
 export default defineComponent({
   data() {
     const eventStore = useEventStore();
-    console.log(eventStore.selectedEvent!.startTime);
     const carDeparture = format(
       new Date(eventStore.selectedEvent!.startTime).toLocaleString(),
       "yyyy-MM-dd'T'HH:mm:ss"

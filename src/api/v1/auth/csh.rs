@@ -34,7 +34,7 @@ async fn login(data: web::Data<AppState>) -> impl Responder {
 #[derive(Deserialize, ToSchema)]
 pub struct AuthRequest {
     code: String,
-    _state: String,
+    state: String,
 }
 
 #[utoipa::path(

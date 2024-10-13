@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import AddCarButton from './AddCarButton.vue';
-import UpdateCarButton from './EditCarButton.vue';
 import CarRowGroup from './CarRowGroup.vue';
 import LeaveCarModal from './LeaveCarModal.vue';
 import Loading from './LoadingWheel.vue';
@@ -11,10 +9,6 @@ const eventStore = useEventStore();
 <template>
   <Loading v-if="loading" />
   <div v-else>
-    <div v-if="!historyMode">
-      <AddCarButton v-if="userCar == null" />
-      <UpdateCarButton v-else :car="userCar" />
-    </div>
     <table class="table">
       <thead>
         <tr>
@@ -40,8 +34,7 @@ const eventStore = useEventStore();
 
 <script lang="ts">
 import { PopupType, type Car } from '@/models';
-import { defineComponent, inject } from 'vue';
-import { useAuthStore } from '@/stores/auth';
+import { defineComponent } from 'vue';
 import { useEventStore } from '@/stores/events';
 import { usePopupStore } from '@/stores/popup';
 
@@ -51,18 +44,8 @@ export default defineComponent({
   },
   data() {
     return {
-      historyMode: inject('historyMode'),
       loading: true
     };
-  },
-  computed: {
-    userCar() {
-      const eventStore = useEventStore();
-      const authStore = useAuthStore();
-      return eventStore.selectedEvent?.cars
-        ?.filter((car) => car.driver.id === authStore.user?.id)
-        .pop();
-    }
   },
   methods: {
     async fetchCarData() {

@@ -6,11 +6,13 @@ import LeaveCarButton from './LeaveCarButton.vue';
 <template>
   <div class="m-1">
     <h5>Driver Comment:</h5>
-    <p>{{ car!.comment }}</p>
+    <p v-if="car!.comment.length != 0">{{ car!.comment }}</p>
+    <p v-else><i>No Comment Provided</i></p>
     <h5>Passengers:</h5>
-    <ul class="no-bullets">
+    <ul class="no-bullets" v-if="car!.riders.length != 0">
       <li v-for="(rider, index) in car!.riders" :key="index">{{ rider.name }}</li>
     </ul>
+    <p v-else><i>No Riders</i></p>
     <LeaveCarButton v-if="userInCar" :carId="car!.id" />
     <JoinCarButton
       v-else-if="car!.riders.length < car!.maxCapacity && userCanJoinCar"

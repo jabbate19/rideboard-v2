@@ -129,7 +129,7 @@ async fn get_all_events(
 ) -> impl Responder {
     let past: bool = params.past.unwrap_or(false);
 
-    let result = query_as!(Event, r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE (start_time >= NOW() AND $1 = False) OR (start_time < NOW() AND $1) ORDER BY start_time ASC"#, past)
+    let result = query_as!(Event, r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1) ORDER BY start_time ASC"#, past)
         .fetch_all(&data.db)
         .await;
 

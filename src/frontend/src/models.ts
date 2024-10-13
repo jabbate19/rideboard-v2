@@ -1,10 +1,10 @@
 export interface UserData {
   type: string;
   id: string;
+  username: string | undefined;
+  email: string | undefined;
   given_name: string;
   family_name: string;
-  preferred_username: string | undefined;
-  picture: string | undefined;
 }
 
 export interface UserStub {
@@ -37,4 +37,9 @@ export enum PopupType {
   Warning = 'bg-warning',
   Success = 'bg-success',
   Default = 'bg-primary'
+}
+
+export interface Place {
+  place_id: number;
+  display_name: string;
 }
