@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (id, realm, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET realm = EXCLUDED.realm, name = EXCLUDED.name;",
+  "query": "INSERT INTO users (id, realm, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET realm = EXCLUDED.realm, name = EXCLUDED.name, email = EXCLUDED.email;",
   "describe": {
     "columns": [],
     "parameters": {
@@ -17,10 +17,11 @@
             }
           }
         },
+        "Varchar",
         "Varchar"
       ]
     },
     "nullable": []
   },
-  "hash": "9b3659975ad241e38c4da1ef980498128943b678ba15e061a2aab88ecf8ae187"
+  "hash": "6a24a501a78242020cb7ce3b4659260cbc6e6a3d956b277a83c1f2a02e5fd835"
 }

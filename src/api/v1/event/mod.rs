@@ -6,7 +6,9 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use chrono::{DateTime, Utc};
+use log::error;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::query_as;
 
 use crate::auth::SessionAuth;
@@ -30,7 +32,7 @@ mod car;
         update_event,
         delete_event
     ),
-    components(schemas(Event, CreateEvent, UpdateEvent, UserData))
+    components(schemas(Event, CreateEvent, UserData))
 )]
 pub(super) struct ApiDoc;
 
@@ -54,13 +56,21 @@ pub struct CreateEvent {
     pub end_time: DateTime<Utc>,
 }
 
-#[derive(Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct UpdateEvent {
-    pub name: Option<String>,
-    pub location: Option<String>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
+fn validate_event(event: &CreateEvent) -> Vec<String> {
+    let mut out = Vec::new();
+    if event.name.len() == 0 {
+        out.push("Missing Name.".to_string());
+    }
+    if event.location.len() == 0 {
+        out.push("Missing Location.".to_string());
+    }
+    if event.start_time < event.end_time {
+        out.push("Start date cannot be before end date.".to_string());
+    }
+    if event.end_time < Utc::now() {
+        out.push("Event cannot be in the past.".to_string())
+    }
+    return out;
 }
 
 #[utoipa::path(
@@ -74,6 +84,14 @@ async fn create_event(
     session: Session,
     event: web::Json<CreateEvent>,
 ) -> impl Responder {
+    let validate = validate_event(&event);
+    if validate.len() != 0 {
+        return HttpResponse::BadRequest().json(json!(
+            {
+                "errors": validate
+            }
+        ));
+    }
     let result = sqlx::query!(
         r#"
         INSERT INTO event (name, location, start_time, end_time, creator) VALUES ($1, $2, $3, $4, $5) RETURNING id
@@ -99,7 +117,7 @@ async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Resp
     let event_id = path.into_inner();
     let result: Option<Event> = query_as!(
             Event,
-            r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE event.id = $1"#,
+            r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.realm, users.name, users.email) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE event.id = $1"#,
             event_id
         )
         .fetch_optional(&data.db)
@@ -129,13 +147,16 @@ async fn get_all_events(
 ) -> impl Responder {
     let past: bool = params.past.unwrap_or(false);
 
-    let result = query_as!(Event, r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1) ORDER BY start_time ASC"#, past)
+    let result = query_as!(Event, r#"SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.realm::text, users.name, users.email) AS "creator!: UserData" FROM event JOIN users ON users.id = event.creator WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1) ORDER BY start_time ASC"#, past)
         .fetch_all(&data.db)
         .await;
 
     match result {
         Ok(events) => HttpResponse::Ok().json(events),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to get events"),
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().body("Failed to get events")
+        }
     }
 }
 
@@ -149,9 +170,18 @@ async fn update_event(
     data: web::Data<AppState>,
     session: Session,
     path: web::Path<i32>,
-    event: web::Json<UpdateEvent>,
+    event: web::Json<CreateEvent>,
 ) -> impl Responder {
     let event_id = path.into_inner();
+
+    let validate = validate_event(&event);
+    if validate.len() != 0 {
+        return HttpResponse::BadRequest().json(json!(
+            {
+                "errors": validate
+            }
+        ));
+    }
 
     let updated = sqlx::query!(
         r#"

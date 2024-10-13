@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import UserSelectSearch from './UserSelectSearch.vue';
+</script>
+
 <template>
   <button
     type="button"
@@ -45,11 +49,21 @@
           </div>
           <div class="form-group">
             <label for="addCarDeparture">Maximum Capacity</label>
-            <input v-model="maxCapacity" type="number" min="0" class="form-control" id="addCarDeparture" />
+            <input
+              v-model="maxCapacity"
+              type="number"
+              min="0"
+              class="form-control"
+              id="addCarDeparture"
+            />
           </div>
           <div class="form-group">
             <label for="addCarComments">Comments</label>
             <input v-model="comment" class="form-control" id="addCarComments" />
+          </div>
+          <div class="form-group">
+            <label>Riders</label>
+            <UserSelectSearch v-model="riders" />
           </div>
         </div>
         <div class="modal-footer">
@@ -70,6 +84,7 @@ import { useAuthStore } from '@/stores/auth';
 import { PopupType, type UserStub } from '@/models';
 import { format } from 'date-fns';
 import { usePopupStore } from '@/stores/popup';
+import { validateCar } from '@/validators';
 
 export default defineComponent({
   data() {
@@ -89,30 +104,36 @@ export default defineComponent({
       departureTime: carDepartureValue,
       returnTime: carReturnValue,
       comment: '',
-      maxCapacity: 0
+      maxCapacity: 0,
+      riders: [] as UserStub[]
     };
   },
   methods: {
     async sendData() {
       const popupStore = usePopupStore();
-      if (this.departureTime.length == 0 || this.returnTime.length == 0) {
-        popupStore.addPopup(PopupType.Danger, 'All times must be filled in.');
-        return;
-      }
-      if (this.maxCapacity < 0) {
-        popupStore.addPopup(PopupType.Danger, 'Capacity must be greater than 0.');
+      const authStore = useAuthStore();
+      const eventStore = useEventStore();
+      let validate = validateCar(
+        authStore.user!,
+        this.departureTime,
+        this.returnTime,
+        this.maxCapacity,
+        this.riders,
+        eventStore.selectedEventCars!
+      );
+      if (validate.length != 0) {
+        validate.forEach((issue) => popupStore.addPopup(PopupType.Danger, issue));
         return;
       }
       const data = {
         departureTime: new Date(this.departureTime).toISOString(),
         returnTime: new Date(this.returnTime).toISOString(),
         maxCapacity: this.maxCapacity,
-        comment: this.comment
+        comment: this.comment,
+        riders: this.riders.map((rider) => rider.id)
       };
 
       try {
-        const eventStore = useEventStore();
-
         const response = await fetch(`/api/v1/event/${eventStore.selectedEvent?.id}/car/`, {
           method: 'POST',
           headers: {
@@ -124,18 +145,19 @@ export default defineComponent({
         if (response.ok) {
           const result = await response.json();
 
-          const authStore = useAuthStore();
           const newCar = {
             id: result,
             driver: {
               id: authStore.user!.id,
-              name: authStore.user!.given_name + ' ' + authStore.user!.family_name
+              realm: authStore.user!.type,
+              name: authStore.user!.given_name + ' ' + authStore.user!.family_name,
+              email: authStore.user!.email!
             },
             departureTime: new Date(this.departureTime),
             returnTime: new Date(this.returnTime),
             maxCapacity: this.maxCapacity,
             comment: this.comment,
-            riders: [] as UserStub[]
+            riders: this.riders
           };
           eventStore.addCar(newCar);
           popupStore.addPopup(PopupType.Success, 'Car Added!');

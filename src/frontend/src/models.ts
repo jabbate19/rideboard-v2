@@ -10,7 +10,9 @@ export interface UserData {
 
 export interface UserStub {
   id: string;
+  realm: string;
   name: string;
+  email: string;
 }
 
 export interface Event {

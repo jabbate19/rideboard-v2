@@ -3,7 +3,8 @@ CREATE TYPE user_realm AS ENUM ('csh', 'google');
 CREATE TABLE users (
     id VARCHAR PRIMARY KEY,
     realm user_realm NOT NULL,
-    name VARCHAR NOT NULL
+    name VARCHAR NOT NULL,
+    email VARCHAR NOT NULL
 );
 
 

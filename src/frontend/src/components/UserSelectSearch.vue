@@ -1,10 +1,17 @@
 <template>
   <div>
-    <h6><span class="badge badge-secondary" v-for="user in users" :key="user">{{ user }}<span>&times;</span></span></h6>
+    <h6>
+      <span class="badge badge-secondary" v-for="user in users" :key="user.id"
+        >{{ user.name }} ({{ user.email }})<span class="removeUser ml-1" @click="removeUser(user)"
+          >&times;</span
+        ></span
+      >
+    </h6>
   </div>
   <input
     type="text"
     class="form-control"
+    v-model="query"
     @input="onInput(($event?.target as HTMLTextAreaElement).value)"
     placeholder="Search for a user..."
   />
@@ -13,32 +20,33 @@
     <li
       class="list-group-item list-group-item-action text-truncate"
       v-for="result in results"
-      :key="result"
+      :key="result.id"
       @click="addUser(result)"
     >
-      {{ result }}
+      {{ result.name }} ({{ result.email }})
     </li>
   </ul>
 </template>
 
 <script lang="ts">
-import { PopupType } from '@/models';
+import { PopupType, type UserStub } from '@/models';
 import { usePopupStore } from '@/stores/popup';
-import { defineComponent, type PropType } from 'vue';
+import { defineComponent } from 'vue';
 
 export default defineComponent({
   props: {
     modelValue: {
-      type: [] as PropType<string[]>,
+      type: Array<UserStub>,
       required: true
     }
   },
   data() {
     return {
+      query: '',
       loading: false,
       timeout: null as number | null,
-      users: [] as string[],
-      results: [] as string[],
+      users: [] as UserStub[],
+      results: [] as UserStub[]
     };
   },
   emits: ['update:modelValue'],
@@ -59,16 +67,15 @@ export default defineComponent({
       }
       const popupStore = usePopupStore();
       try {
-        const response = await fetch(
-          `/api/v1/chom?search=${value}`
-        );
+        const response = await fetch(`/api/v1/user/?query=${value}`);
         if (!response.ok) {
           popupStore.addPopup(
             PopupType.Danger,
             `Failed to Get User Suggestions (${response.status})`
           );
         }
-        this.results = await response.json();
+        let data: UserStub[] = await response.json();
+        this.results = data.filter((user) => !this.users.map((x) => x.id).includes(user.id));
       } catch (error) {
         console.error('Error fetching data:', error);
         popupStore.addPopup(
@@ -80,10 +87,25 @@ export default defineComponent({
         this.loading = false;
       }
     },
-    addUser(user: string) {
+    addUser(user: UserStub) {
       this.users.push(user);
+      this.query = '';
+      this.results = [];
+      this.$emit('update:modelValue', this.users);
+    },
+    removeUser(user: UserStub) {
+      this.users.splice(
+        this.users.findIndex((x) => x === user),
+        1
+      );
       this.$emit('update:modelValue', this.users);
     }
   }
 });
 </script>
+
+<style scoped>
+.removeUser {
+  cursor: pointer;
+}
+</style>

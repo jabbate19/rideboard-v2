@@ -64,11 +64,10 @@ export default defineComponent({
         }
 
         const riders = eventStore.selectedEvent?.cars?.find((car) => car.id === this.carId)?.riders;
-        const rider = {
-          id: authStore.user!.id,
-          name: authStore.user!.given_name + ' ' + authStore.user!.family_name
-        };
-        riders?.splice(riders?.indexOf(rider), 1);
+        riders?.splice(
+          riders?.findIndex((r) => r.id === authStore.user!.id),
+          1
+        );
         popupStore.addPopup(PopupType.Success, 'You have been removed from this car!');
         this.closeModal();
       } catch (error) {

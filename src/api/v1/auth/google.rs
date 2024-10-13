@@ -76,10 +76,11 @@ async fn auth(
         .unwrap();
 
     sqlx::query!(
-        "INSERT INTO users (id, realm, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET realm = EXCLUDED.realm, name = EXCLUDED.name;",
+        "INSERT INTO users (id, realm, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET realm = EXCLUDED.realm, name = EXCLUDED.name, email = EXCLUDED.email;",
         user_info.sub,
         UserRealm::Google as _,
-        format!("{} {}", user_info.given_name, user_info.family_name)
+        format!("{} {}", user_info.given_name, user_info.family_name),
+        user_info.email
     )
     .execute(&data.db)
     .await.unwrap();

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS \"creator!: UserData\" FROM event JOIN users ON users.id = event.creator WHERE event.id = $1",
+  "query": "SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.realm::text, users.name, users.email) AS \"creator!: UserData\" FROM event JOIN users ON users.id = event.creator WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1) ORDER BY start_time ASC",
   "describe": {
     "columns": [
       {
@@ -36,7 +36,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Bool"
       ]
     },
     "nullable": [
@@ -48,5 +48,5 @@
       null
     ]
   },
-  "hash": "083dadea7a5750d488d29a9aa60c35f5eaba3eceb280380900102865dd77aaef"
+  "hash": "b1dafa62e1eda447ba75dc1e31d5468432542a168d1f34425ebde1e37f8ee6a1"
 }

@@ -91,6 +91,7 @@ import { useEventStore } from '@/stores/events';
 import { format } from 'date-fns';
 import { usePopupStore } from '@/stores/popup';
 import { PopupType } from '@/models';
+import { validateEvent } from '@/validators';
 
 export default defineComponent({
   data() {
@@ -111,16 +112,17 @@ export default defineComponent({
   methods: {
     async editEvent() {
       const popupStore = usePopupStore();
-      if (
-        this.eventTitle.length == 0 ||
-        this.eventLocation.length == 0 ||
-        this.eventStart.length == 0 ||
-        this.eventEnd.length == 0
-      ) {
-        popupStore.addPopup(PopupType.Danger, 'Please fill in all fields.');
-        return;
-      }
       try {
+        let validate = validateEvent(
+          this.eventTitle,
+          this.eventLocation,
+          this.eventStart,
+          this.eventEnd
+        );
+        if (validate.length != 0) {
+          validate.forEach((issue) => popupStore.addPopup(PopupType.Danger, issue));
+          return;
+        }
         const data = {
           name: this.eventTitle,
           location: this.eventLocation,

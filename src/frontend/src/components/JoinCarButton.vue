@@ -36,7 +36,9 @@ export default defineComponent({
           .pop()
           ?.riders.push({
             id: authStore.user!.id,
-            name: authStore.user!.given_name + ' ' + authStore.user!.family_name
+            realm: authStore.user!.type,
+            name: authStore.user!.given_name + ' ' + authStore.user!.family_name,
+            email: authStore.user!.email!
           });
         popupStore.addPopup(PopupType.Success, 'You have been added!');
       } catch (error) {

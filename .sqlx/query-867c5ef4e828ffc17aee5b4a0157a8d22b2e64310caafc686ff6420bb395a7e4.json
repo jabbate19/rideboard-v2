@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM rider WHERE car_id = $1 RETURNING rider",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rider",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "867c5ef4e828ffc17aee5b4a0157a8d22b2e64310caafc686ff6420bb395a7e4"
+}

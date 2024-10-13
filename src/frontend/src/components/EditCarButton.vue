@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import RemoveCarButton from './RemoveCarButton.vue';
 import RemoveCarModal from './RemoveCarModal.vue';
+import UserSelectSearch from './UserSelectSearch.vue';
 </script>
 
 <template>
@@ -61,6 +62,10 @@ import RemoveCarModal from './RemoveCarModal.vue';
             <label for="updateCarComments">Comments</label>
             <input v-model="comment" class="form-control" id="updateCarComments" />
           </div>
+          <div class="form-group">
+            <label>Riders</label>
+            <UserSelectSearch v-model="riders" />
+          </div>
         </div>
         <RemoveCarButton />
         <div class="modal-footer">
@@ -86,6 +91,8 @@ import { useEventStore } from '@/stores/events';
 import { PopupType, type Car } from '@/models';
 import { format } from 'date-fns';
 import { usePopupStore } from '@/stores/popup';
+import { useAuthStore } from '@/stores/auth';
+import { validateCar } from '@/validators';
 
 export default defineComponent({
   props: {
@@ -99,28 +106,36 @@ export default defineComponent({
       ),
       returnTime: format(new Date(this.car!.returnTime.toLocaleString()), "yyyy-MM-dd'T'HH:mm:ss"),
       comment: this.car!.comment,
-      maxCapacity: this.car!.maxCapacity
+      maxCapacity: this.car!.maxCapacity,
+      riders: this.car!.riders
     };
   },
   methods: {
     async updateCar() {
       const popupStore = usePopupStore();
+      const authStore = useAuthStore();
+      const eventStore = useEventStore();
       try {
-        if (this.departureTime.length == 0 || this.returnTime.length == 0) {
-          popupStore.addPopup(PopupType.Danger, 'All times must be filled in.');
-          return;
-        }
-        if (this.maxCapacity < 0) {
-          popupStore.addPopup(PopupType.Danger, 'Capacity must be greater than 0.');
+        let validate = validateCar(
+          authStore.user!,
+          this.departureTime,
+          this.returnTime,
+          this.maxCapacity,
+          this.riders,
+          eventStore.selectedEventCars!.filter((car) => car.id != this.car!.id)
+        );
+        if (validate.length != 0) {
+          validate.forEach((issue) => popupStore.addPopup(PopupType.Danger, issue));
           return;
         }
         const data = {
           departureTime: new Date(this.departureTime!).toISOString(),
           returnTime: new Date(this.returnTime!).toISOString(),
           maxCapacity: this.maxCapacity,
-          comment: this.comment
+          comment: this.comment,
+          riders: this.riders.map((rider) => rider.id)
         };
-        const eventStore = useEventStore();
+
         const response = await fetch(
           `/api/v1/event/${eventStore.selectedEvent!.id}/car/${this.car!.id}`,
           {
@@ -141,6 +156,7 @@ export default defineComponent({
         car!.returnTime = new Date(this.returnTime!);
         car!.maxCapacity = this.maxCapacity!;
         car!.comment = this.comment!;
+        car!.riders = this.riders!;
         popupStore.addPopup(PopupType.Success, 'Car Updated!');
         this.closeModal();
       } catch (error) {

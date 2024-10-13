@@ -9,6 +9,7 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::{query, query_as};
 use utoipa::{OpenApi, ToSchema};
 
@@ -28,7 +29,7 @@ mod rider;
         update_car,
         delete_car
     ),
-    components(schemas(CarData, CreateCar, UpdateCar, UserData))
+    components(schemas(CarData, CreateCar, UserData))
 )]
 pub struct ApiDoc;
 
@@ -62,15 +63,50 @@ pub struct CreateCar {
     pub departure_time: DateTime<Utc>,
     pub return_time: DateTime<Utc>,
     pub comment: String,
+    pub riders: Vec<UserData>,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
-#[serde(rename_all = "camelCase")]
-struct UpdateCar {
-    pub max_capacity: Option<i32>,
-    pub departure_time: Option<DateTime<Utc>>,
-    pub return_time: Option<DateTime<Utc>>,
-    pub comment: String,
+fn validate_car(car: &CreateCar, user: &String, other_cars: Vec<CarData>) -> Vec<String> {
+    let mut out = Vec::new();
+    if car.return_time < car.departure_time {
+        out.push("Return time cannot be before departure.".to_string())
+    }
+    if car.departure_time < Utc::now() {
+        out.push("Car cannot leave in the past.".to_string());
+    }
+    if car.max_capacity < 0 {
+        out.push("Capacity must be greater than or equal to 0".to_string());
+    }
+    if car.riders.len() > (car.max_capacity as usize) {
+        out.push("You have too many riders for your capacity.".to_string());
+    }
+    if car
+        .riders
+        .iter()
+        .map(|rider| rider.id.clone())
+        .collect::<Vec<String>>()
+        .contains(user)
+    {
+        out.push("You cannot be a rider in your own car.".to_string());
+    }
+    let other_car_members: Vec<String> = other_cars
+        .iter()
+        .flat_map(|car| {
+            let mut out = car.riders.as_ref().unwrap().clone();
+            out.push(car.driver.clone());
+            out
+        })
+        .map(|user| user.id)
+        .collect();
+    for rider in car.riders.iter() {
+        if other_car_members.contains(&rider.id) {
+            out.push(format!(
+                "{} is already in another car or is a driver.",
+                rider.name
+            ))
+        }
+    }
+    return out;
 }
 
 #[utoipa::path(
@@ -90,32 +126,45 @@ async fn create_car(
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
     let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
-    if car.max_capacity < 0 {
-        return HttpResponse::BadRequest()
-            .body("Sorry @cinnamon, you can't have negative people in your car :)");
+    let mut tx = data.db.begin().await.unwrap();
+    let other_cars = query_as!(
+        CarData,
+        r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
+        (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
+        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
+        FROM car
+        JOIN users driverUser ON car.driver = driverUser.id
+        LEFT JOIN rider on car.id = rider.car_id
+        LEFT JOIN users riderUser ON rider.rider = riderUser.id
+        WHERE event_id = $1 GROUP BY car.id, driverUser.id"#,
+        event_id)
+        .fetch_all(&mut *tx)
+        .await.unwrap();
+    let validate = validate_car(&car, &user_id, other_cars);
+    if validate.len() != 0 {
+        return HttpResponse::BadRequest().json(json!({
+            "errors": validate
+        }));
     }
-    let check = query!(
-        r#"SELECT COUNT(*) as count FROM (SELECT id FROM car WHERE event_id = $1 AND driver = $2 UNION SELECT rider.car_id FROM rider JOIN car ON rider.car_id = car.id WHERE car.event_id = $1 AND rider.rider = $2)"#,
-        event_id, user_id
-    ).fetch_one(&data.db).await.unwrap();
 
-    if check.count.unwrap() > 0 {
-        return HttpResponse::BadRequest().body("User is already in a car.");
-    }
-
-    let result = sqlx::query!(
+    let record = query!(
         r#"
         INSERT INTO car (event_id, driver, max_capacity, departure_time, return_time, comment) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
         "#,
         event_id, user_id, car.max_capacity, car.departure_time, car.return_time, car.comment
     )
-    .fetch_one(&data.db)
-    .await;
-
-    match result {
-        Ok(record) => HttpResponse::Ok().json(record.id),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to create car"),
-    }
+    .fetch_one(&mut *tx)
+    .await.unwrap();
+    
+    let _ = query!(
+        r#"
+        INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
+        "#,
+        record.id,
+        &car.riders.iter().map(|rider| rider.id.clone()).collect::<Vec<String>>()
+    ).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    HttpResponse::Ok().json(record.id)
 }
 
 #[utoipa::path(
@@ -132,8 +181,8 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
     let result: Option<CarData> = query_as!(
         CarData,
         r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
-        (driverUser.id, driverUser.name) AS "driver!: UserData",
-        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.name) END), NULL) as "riders!: Vec<UserData>"
+        (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
+        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
         FROM car
         JOIN users driverUser ON car.driver = driverUser.id
         LEFT JOIN rider on car.id = rider.car_id
@@ -166,8 +215,8 @@ async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
     let result = query_as!(
         CarData,
         r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
-        (driverUser.id, driverUser.name) AS "driver!: UserData",
-        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.name) END), NULL) as "riders!: Vec<UserData>"
+        (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
+        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
         FROM car
         JOIN users driverUser ON car.driver = driverUser.id
         LEFT JOIN rider on car.id = rider.car_id
@@ -199,16 +248,31 @@ async fn update_car(
     data: web::Data<AppState>,
     session: Session,
     path: web::Path<(i32, i32)>,
-    car: web::Json<UpdateCar>,
+    car: web::Json<CreateCar>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    if let Some(capacity) = car.max_capacity {
-        if capacity < 0 {
-            return HttpResponse::BadRequest()
-                .body("Sorry @cinnamon, you can't have negative people in your car :)");
-        }
+    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
+    let mut tx = data.db.begin().await.unwrap();
+    let other_cars = query_as!(
+        CarData,
+        r#"SELECT car.id, car.event_id, car.max_capacity, car.departure_time, car.return_time, car.comment,
+        (driverUser.id, driverUser.realm::text, driverUser.name, driverUser.email) AS "driver!: UserData",
+        ARRAY_REMOVE(ARRAY_AGG(CASE WHEN riderUser.id IS NOT NULL THEN (riderUser.id, riderUser.realm::text, riderUser.name, riderUser.email) END), NULL) as "riders!: Vec<UserData>"
+        FROM car
+        JOIN users driverUser ON car.driver = driverUser.id
+        LEFT JOIN rider on car.id = rider.car_id
+        LEFT JOIN users riderUser ON rider.rider = riderUser.id
+        WHERE event_id = $1 AND car_id != $2 GROUP BY car.id, driverUser.id"#,
+        event_id, car_id)
+        .fetch_all(&mut *tx)
+        .await.unwrap();
+    let validate = validate_car(&car, &user_id, other_cars);
+    if validate.len() != 0 {
+        return HttpResponse::BadRequest().json(json!({
+            "errors": validate
+        }));
     }
-    let updated = sqlx::query!(
+    let updated = query!(
         r#"
         UPDATE car SET
         max_capacity = COALESCE($1, max_capacity),
@@ -223,16 +287,33 @@ async fn update_car(
         car.comment,
         event_id,
         car_id,
-        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
+        user_id
     )
-    .fetch_optional(&data.db)
+    .fetch_optional(&mut *tx)
     .await;
 
     match updated {
-        Ok(Some(_)) => HttpResponse::Ok().body("Car updated successfully"),
-        Ok(None) => HttpResponse::NotFound().body("Car not found or you are not the driver."),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to update car"),
+        Ok(Some(_)) => {},
+        Ok(None) => return HttpResponse::NotFound().body("Car not found or you are not the driver."),
+        Err(_) => return HttpResponse::InternalServerError().body("Failed to update car"),
     }
+
+    // Used for sending pings
+    let current_riders: Vec<String> = query!(
+        r#"DELETE FROM rider WHERE car_id = $1 RETURNING rider"#,
+        car_id
+    ).fetch_all(&mut *tx).await.unwrap().iter().map(|record| record.rider.clone()).collect();
+    
+    let _ = query!(
+        r#"
+        INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
+        "#,
+        car_id,
+        &car.riders.iter().map(|rider| rider.id.clone()).collect::<Vec<String>>()
+    ).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+
+    HttpResponse::Ok().body("Car updated successfully")
 }
 
 #[utoipa::path(
@@ -251,7 +332,7 @@ async fn delete_car(
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
 
-    let deleted = sqlx::query!(
+    let deleted = query!(
         "DELETE FROM car WHERE event_id = $1 AND id = $2 AND driver = $3 RETURNING id",
         event_id,
         car_id,

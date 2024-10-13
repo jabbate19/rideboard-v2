@@ -10,7 +10,9 @@ import LeaveCarButton from './LeaveCarButton.vue';
     <p v-else><i>No Comment Provided</i></p>
     <h5>Passengers:</h5>
     <ul class="no-bullets" v-if="car!.riders.length != 0">
-      <li v-for="(rider, index) in car!.riders" :key="index">{{ rider.name }}</li>
+      <li v-for="(rider, index) in car!.riders" :key="index">
+        {{ rider.name }} ({{ rider.email }})
+      </li>
     </ul>
     <p v-else><i>No Riders</i></p>
     <LeaveCarButton v-if="userInCar" :carId="car!.id" />
