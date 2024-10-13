@@ -63,7 +63,7 @@ pub struct CreateCar {
     pub departure_time: DateTime<Utc>,
     pub return_time: DateTime<Utc>,
     pub comment: String,
-    pub riders: Vec<UserData>,
+    pub riders: Vec<String>,
 }
 
 fn validate_car(car: &CreateCar, user: &String, other_cars: Vec<CarData>) -> Vec<String> {
@@ -82,9 +82,6 @@ fn validate_car(car: &CreateCar, user: &String, other_cars: Vec<CarData>) -> Vec
     }
     if car
         .riders
-        .iter()
-        .map(|rider| rider.id.clone())
-        .collect::<Vec<String>>()
         .contains(user)
     {
         out.push("You cannot be a rider in your own car.".to_string());
@@ -99,14 +96,14 @@ fn validate_car(car: &CreateCar, user: &String, other_cars: Vec<CarData>) -> Vec
         .map(|user| user.id)
         .collect();
     for rider in car.riders.iter() {
-        if other_car_members.contains(&rider.id) {
+        if other_car_members.contains(&rider) {
             out.push(format!(
                 "{} is already in another car or is a driver.",
-                rider.name
+                rider
             ))
         }
     }
-    return out;
+    out
 }
 
 #[utoipa::path(
@@ -141,7 +138,7 @@ async fn create_car(
         .fetch_all(&mut *tx)
         .await.unwrap();
     let validate = validate_car(&car, &user_id, other_cars);
-    if validate.len() != 0 {
+    if !validate.is_empty() {
         return HttpResponse::BadRequest().json(json!({
             "errors": validate
         }));
@@ -161,7 +158,7 @@ async fn create_car(
         INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
         "#,
         record.id,
-        &car.riders.iter().map(|rider| rider.id.clone()).collect::<Vec<String>>()
+        &car.riders
     ).execute(&mut *tx).await.unwrap();
     tx.commit().await.unwrap();
     HttpResponse::Ok().json(record.id)
@@ -267,7 +264,7 @@ async fn update_car(
         .fetch_all(&mut *tx)
         .await.unwrap();
     let validate = validate_car(&car, &user_id, other_cars);
-    if validate.len() != 0 {
+    if !validate.is_empty() {
         return HttpResponse::BadRequest().json(json!({
             "errors": validate
         }));
@@ -309,7 +306,7 @@ async fn update_car(
         INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
         "#,
         car_id,
-        &car.riders.iter().map(|rider| rider.id.clone()).collect::<Vec<String>>()
+        &car.riders
     ).execute(&mut *tx).await.unwrap();
     tx.commit().await.unwrap();
 

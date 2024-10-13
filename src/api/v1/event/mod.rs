@@ -58,10 +58,10 @@ pub struct CreateEvent {
 
 fn validate_event(event: &CreateEvent) -> Vec<String> {
     let mut out = Vec::new();
-    if event.name.len() == 0 {
+    if event.name.is_empty() {
         out.push("Missing Name.".to_string());
     }
-    if event.location.len() == 0 {
+    if event.location.is_empty() {
         out.push("Missing Location.".to_string());
     }
     if event.start_time < event.end_time {
@@ -70,7 +70,7 @@ fn validate_event(event: &CreateEvent) -> Vec<String> {
     if event.end_time < Utc::now() {
         out.push("Event cannot be in the past.".to_string())
     }
-    return out;
+    out
 }
 
 #[utoipa::path(
@@ -85,7 +85,7 @@ async fn create_event(
     event: web::Json<CreateEvent>,
 ) -> impl Responder {
     let validate = validate_event(&event);
-    if validate.len() != 0 {
+    if !validate.is_empty() {
         return HttpResponse::BadRequest().json(json!(
             {
                 "errors": validate
@@ -175,7 +175,7 @@ async fn update_event(
     let event_id = path.into_inner();
 
     let validate = validate_event(&event);
-    if validate.len() != 0 {
+    if !validate.is_empty() {
         return HttpResponse::BadRequest().json(json!(
             {
                 "errors": validate
