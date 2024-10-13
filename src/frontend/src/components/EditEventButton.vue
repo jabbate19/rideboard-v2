@@ -60,6 +60,7 @@ import DeleteEventModal from './DeleteEventModal.vue';
             <label for="editEventEnd">End Time</label>
             <input
               v-model="eventEnd"
+              :min="eventStart"
               type="datetime-local"
               class="form-control"
               id="editEventEnd"

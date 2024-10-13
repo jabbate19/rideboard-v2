@@ -37,6 +37,7 @@
             <label for="addCarReturn">Return Time</label>
             <input
               v-model="returnTime"
+              :min="departureTime"
               type="datetime-local"
               class="form-control"
               id="addCarReturn"
@@ -44,7 +45,7 @@
           </div>
           <div class="form-group">
             <label for="addCarDeparture">Maximum Capacity</label>
-            <input v-model="maxCapacity" type="number" class="form-control" id="addCarDeparture" />
+            <input v-model="maxCapacity" type="number" min="0" class="form-control" id="addCarDeparture" />
           </div>
           <div class="form-group">
             <label for="addCarComments">Comments</label>

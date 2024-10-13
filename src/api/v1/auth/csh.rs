@@ -34,6 +34,7 @@ async fn login(data: web::Data<AppState>) -> impl Responder {
 #[derive(Deserialize, ToSchema)]
 pub struct AuthRequest {
     code: String,
+    #[allow(dead_code)]
     state: String,
 }
 

@@ -46,6 +46,7 @@ import LocationSearch from './LocationSearch.vue';
             <label for="CreateEventEnd">End Time</label>
             <input
               v-model="eventEnd"
+              :min="eventStart"
               type="datetime-local"
               class="form-control"
               id="CreateEventEnd"

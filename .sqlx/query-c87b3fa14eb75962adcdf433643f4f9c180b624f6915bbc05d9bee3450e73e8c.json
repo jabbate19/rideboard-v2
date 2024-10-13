@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS \"creator!: UserData\" FROM event JOIN users ON users.id = event.creator WHERE (start_time >= NOW() AND $1 = False) OR (start_time < NOW() AND $1) ORDER BY start_time ASC",
+  "query": "SELECT event.id, event.name, event.location, event.start_time, event.end_time, (users.id, users.name) AS \"creator!: UserData\" FROM event JOIN users ON users.id = event.creator WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1) ORDER BY start_time ASC",
   "describe": {
     "columns": [
       {
@@ -48,5 +48,5 @@
       null
     ]
   },
-  "hash": "aa45f4a0c08b700822dc4b05285e11a2d00c02e857a0c73f11d3cf9c418a83dd"
+  "hash": "c87b3fa14eb75962adcdf433643f4f9c180b624f6915bbc05d9bee3450e73e8c"
 }

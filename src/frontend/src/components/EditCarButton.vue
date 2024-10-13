@@ -42,6 +42,7 @@ import RemoveCarModal from './RemoveCarModal.vue';
             <label for="updateCarReturn">Return Time</label>
             <input
               v-model="returnTime"
+              :min="departureTime"
               type="datetime-local"
               class="form-control"
               id="updateCarReturn"

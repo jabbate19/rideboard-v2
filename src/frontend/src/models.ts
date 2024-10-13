@@ -5,6 +5,7 @@ export interface UserData {
   email: string | undefined;
   given_name: string;
   family_name: string;
+  picture: string;
 }
 
 export interface UserStub {
