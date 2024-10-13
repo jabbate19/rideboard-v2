@@ -91,7 +91,7 @@ async fn main() -> std::io::Result<()> {
             }))
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
-                    .cookie_secure(!env::var("DEVELOPMENT").is_ok())
+                    .cookie_secure(env::var("DEVELOPMENT").is_err())
                     .build(),
             )
             .wrap(Logger::default())

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h6><span class="badge badge-secondary" v-for="user in users">{{ user }}<span>&times;</span></span></h6>
+    <h6><span class="badge badge-secondary" v-for="user in users" :key="user">{{ user }}<span>&times;</span></span></h6>
   </div>
   <input
     type="text"
@@ -60,7 +60,7 @@ export default defineComponent({
       const popupStore = usePopupStore();
       try {
         const response = await fetch(
-          `/api/v1/chom`
+          `/api/v1/chom?search=${value}`
         );
         if (!response.ok) {
           popupStore.addPopup(
