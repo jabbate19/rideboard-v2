@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::query_as;
 
+use crate::app::AppState;
 use crate::auth::SessionAuth;
-use crate::AppState;
 
 use utoipa::{OpenApi, ToSchema};
 

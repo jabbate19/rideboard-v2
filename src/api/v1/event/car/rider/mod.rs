@@ -1,6 +1,8 @@
-use crate::api::v1::event::UserInfo;
+use std::borrow::BorrowMut;
+
+use crate::app::{AppState, SimpleRiderChange};
 use crate::auth::SessionAuth;
-use crate::AppState;
+use crate::{api::v1::event::UserInfo, app::RedisJob};
 use actix_session::Session;
 use actix_web::{
     delete, post,
@@ -8,6 +10,7 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use log::error;
+use redis_work_queue::{Item, WorkQueue};
 use sqlx::query;
 use utoipa::OpenApi;
 
@@ -67,7 +70,21 @@ async fn create_rider(
     .await;
 
     match result {
-        Ok(_) => HttpResponse::Ok().body("Joined Car"),
+        Ok(_) => {
+            let work_queue = WorkQueue::new(data.work_queue_key.clone());
+            let item = Item::from_json_data(&RedisJob::Join(SimpleRiderChange {
+                event_id,
+                car_id,
+                rider_id: user_id,
+            }))
+            .unwrap();
+            let mut redis = data.redis.lock().unwrap().clone();
+            work_queue
+                .add_item(&mut redis, &item)
+                .await
+                .expect("failed to add item to work queue");
+            HttpResponse::Ok().body("Joined Car")
+        }
         Err(e) => {
             error!("Failed to Add Rider: {}", e);
             HttpResponse::InternalServerError().body("Failed to create car")
@@ -90,18 +107,33 @@ async fn delete_rider(
     session: Session,
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
-    let (_event_id, car_id) = path.into_inner();
+    let (event_id, car_id) = path.into_inner();
+    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
 
     let deleted = sqlx::query!(
         "DELETE FROM rider WHERE car_id = $1 AND rider = $2",
         car_id,
-        session.get::<UserInfo>("userinfo").unwrap().unwrap().id
+        user_id
     )
     .execute(&data.db)
     .await;
 
     match deleted {
-        Ok(_) => HttpResponse::Ok().body("Rider deleted"),
+        Ok(_) => {
+            let work_queue = WorkQueue::new(data.work_queue_key.clone());
+            let item = Item::from_json_data(&RedisJob::Leave(SimpleRiderChange {
+                event_id,
+                car_id,
+                rider_id: user_id,
+            }))
+            .unwrap();
+            let mut redis = data.redis.lock().unwrap().clone();
+            work_queue
+                .add_item(&mut redis, &item)
+                .await
+                .expect("failed to add item to work queue");
+            HttpResponse::Ok().body("Rider deleted")
+        }
         Err(_) => HttpResponse::InternalServerError().body("Failed to delete rider"),
     }
 }

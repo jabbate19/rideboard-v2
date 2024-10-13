@@ -1,6 +1,6 @@
 use crate::api::v1::auth::models::UserRealm;
 use crate::api::v1::auth::models::{CSHUserInfo, UserInfo};
-use crate::AppState;
+use crate::app::AppState;
 use actix_session::Session;
 use actix_web::http::header;
 use actix_web::{get, Scope};

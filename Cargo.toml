@@ -9,6 +9,7 @@ actix-web = { version = "4.9.0", features = ["cookies"] }
 anyhow = "1.0.88"
 base64 = "0.22.1"
 chrono = { version = "0.4.38", features = ["serde"] }
+clap = { version = "4.5.20", features = ["derive"] }
 dotenv = "0.15.0"
 env_logger = "0.11.5"
 futures-util = "0.3.30"
@@ -16,9 +17,12 @@ include_dir = "0.7.4"
 log = "0.4.22"
 mime_guess = "2.0.5"
 oauth2 = "4.4.2"
+redis = { version = "0.26.1", features = ["aio", "tokio-comp"] }
+redis-work-queue = "0.3.0"
 reqwest = { version = "0.12.7", features = ["json"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 sqlx = { version = "0.8.2", features = ["chrono", "postgres", "runtime-tokio"] }
+tokio = { version = "1.40.0", features = ["full"] }
 utoipa = { version = "5.0.0-beta.0", features = ["actix_extras", "chrono"] }
 utoipa-swagger-ui = { version = "7.1.1-beta.0", features = ["actix-web"] }

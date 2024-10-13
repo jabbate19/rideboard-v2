@@ -2,8 +2,8 @@ use actix_web::{get, web, HttpResponse, Responder, Scope};
 use serde::Deserialize;
 use sqlx::query_as;
 
+use crate::app::AppState;
 use crate::auth::SessionAuth;
-use crate::AppState;
 
 use utoipa::OpenApi;
 

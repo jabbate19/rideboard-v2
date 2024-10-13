@@ -1,7 +1,7 @@
 use crate::api::v1::auth::common;
 use crate::api::v1::auth::models::UserRealm;
 use crate::api::v1::auth::models::{GoogleUserInfo, UserInfo};
-use crate::AppState;
+use crate::app::AppState;
 use actix_session::Session;
 use actix_web::http::header;
 use actix_web::{get, web, Scope};

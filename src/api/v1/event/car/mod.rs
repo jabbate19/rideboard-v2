@@ -1,5 +1,5 @@
 use crate::api::v1::auth::models::UserInfo;
-use crate::AppState;
+use crate::app::AppState;
 use crate::{api::v1::auth::models::UserData, auth::SessionAuth};
 use actix_session::Session;
 use actix_web::{
@@ -315,9 +315,13 @@ async fn update_car(
     match updated {
         Ok(Some(_)) => {}
         Ok(None) => {
-            return HttpResponse::NotFound().body("Car not found or you are not the driver.")
+            tx.rollback().await.unwrap();
+            return HttpResponse::NotFound().body("Car not found or you are not the driver.");
         }
-        Err(_) => return HttpResponse::InternalServerError().body("Failed to update car"),
+        Err(_) => {
+            tx.rollback().await.unwrap();
+            return HttpResponse::InternalServerError().body("Failed to update car");
+        }
     }
 
     // Used for sending pings
