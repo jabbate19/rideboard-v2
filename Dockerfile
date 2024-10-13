@@ -51,4 +51,4 @@ WORKDIR /app
 
 COPY --from=builder /app/target/release/rideboard-v2 .
 
-CMD ["./rideboard-v2"]
+ENTRYPOINT ["./rideboard-v2"]
