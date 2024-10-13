@@ -45,7 +45,7 @@ export default defineComponent({
       query: '',
       loading: false,
       timeout: null as number | null,
-      users: [] as UserStub[],
+      users: this.modelValue as UserStub[],
       results: [] as UserStub[]
     };
   },
