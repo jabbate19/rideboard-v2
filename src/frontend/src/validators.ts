@@ -43,8 +43,8 @@ export function validateEvent(title: string, location: string, start: string, en
   if (title.length == 0 || location.length == 0 || start.length == 0 || end.length == 0) {
     out.push('Please fill in all fields.');
   }
-  if (new Date(start) < new Date(end)) {
-    out.push('Start date cannot be before end.');
+  if (new Date(start) > new Date(end)) {
+    out.push('Start date cannot be after end.');
   }
   if (new Date(end) < new Date()) {
     out.push('Event cannot be in the past.');

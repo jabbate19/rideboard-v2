@@ -35,8 +35,8 @@ impl EventData {
         if self.location.is_empty() {
             errs.push("Missing Location.".to_string());
         }
-        if self.start_time < self.end_time {
-            errs.push("Start date cannot be before end date.".to_string());
+        if self.start_time > self.end_time {
+            errs.push("Start date cannot be after end date.".to_string());
         }
         if self.end_time < Utc::now() {
             errs.push("Event cannot be in the past.".to_string())
