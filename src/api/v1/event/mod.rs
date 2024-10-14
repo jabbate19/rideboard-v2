@@ -17,7 +17,7 @@ use crate::auth::SessionAuth;
 
 use utoipa::OpenApi;
 
-use super::auth::models::UserData;
+use crate::db::user::UserData;
 
 mod car;
 

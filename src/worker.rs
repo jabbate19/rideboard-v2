@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-};
+use std::{collections::HashSet, env};
 
 use log::error;
 use redis::{aio::MultiplexedConnection, RedisResult};
@@ -10,7 +7,8 @@ use sqlx::{postgres::PgPoolOptions, query, query_as, Pool, Postgres};
 use std::time::Duration;
 
 use crate::{
-    app::{RedisJob, SimpleRiderChange, UserData},
+    app::{RedisJob, SimpleRiderChange},
+    db::user::UserData,
     pings::PingClient,
 };
 
@@ -65,32 +63,14 @@ async fn get_driver(car_id: i32, db_pool: &Pool<Postgres>) -> UserData {
     ).fetch_one(db_pool).await.unwrap()
 }
 
-async fn get_users_by_id(ids: Vec<String>, db_pool: &Pool<Postgres>) -> HashMap<String, UserData> {
-    let data = query_as!(
-        UserData,
-        r#"
-        SELECT id AS "id!", realm::text AS "realm!", name AS "name!", email AS "email!"
-        FROM users WHERE id IN (SELECT UNNEST($1::VARCHAR[]))
-        "#,
-        &ids
-    )
-    .fetch_all(db_pool)
-    .await
-    .unwrap();
-    HashMap::from_iter(data.iter().map(|user| (user.id.clone(), user.clone())))
-}
-
 async fn get_simple_data(
     data: SimpleRiderChange,
     db_pool: &Pool<Postgres>,
 ) -> (String, UserData, UserData) {
-    let rider = query_as!(
-        UserData,
-        r#"
-        SELECT users.id AS "id!", users.realm::text AS "realm!", users.name AS "name!", users.email AS "email!"
-        FROM users where id = $1;
-        "#, data.rider_id
-    ).fetch_one(db_pool).await.unwrap();
+    let rider = UserData::select_one(data.rider_id, db_pool)
+        .await
+        .unwrap()
+        .unwrap();
     (
         get_event_name(data.event_id, db_pool).await,
         get_driver(data.car_id, db_pool).await,
@@ -137,7 +117,7 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
             let driver = get_driver(data.car_id, db_pool).await;
             let old_set: HashSet<String> = HashSet::from_iter(data.old_riders);
             let new_set: HashSet<String> = HashSet::from_iter(data.new_riders);
-            let user_map = get_users_by_id(
+            let user_map = UserData::select_map(
                 old_set
                     .difference(&new_set)
                     .chain(new_set.difference(&old_set))
@@ -145,7 +125,8 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                     .collect(),
                 db_pool,
             )
-            .await;
+            .await
+            .unwrap();
             for removed in old_set.difference(&new_set) {
                 let user = user_map.get(removed).unwrap();
                 if user.realm != "csh" {

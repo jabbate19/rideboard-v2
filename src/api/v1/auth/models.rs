@@ -1,12 +1,4 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
-#[derive(Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "user_realm", rename_all = "lowercase")]
-pub enum UserRealm {
-    Csh,
-    Google,
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CSHUserInfo {
@@ -36,15 +28,6 @@ pub struct UserInfo {
     pub family_name: String,
     pub picture: String,
     pub groups: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, sqlx::Type, ToSchema, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct UserData {
-    pub id: String,
-    pub realm: String,
-    pub name: String,
-    pub email: String,
 }
 
 impl From<CSHUserInfo> for UserInfo {

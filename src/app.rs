@@ -5,7 +5,6 @@ use redis::aio::MultiplexedConnection;
 use redis_work_queue::KeyPrefix;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use utoipa::ToSchema;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -16,15 +15,6 @@ pub struct AppState {
     pub google_userinfo_url: String,
     pub csh_oauth: BasicClient,
     pub csh_userinfo_url: String,
-}
-
-#[derive(Serialize, Deserialize, sqlx::Type, ToSchema, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct UserData {
-    pub id: String,
-    pub realm: String,
-    pub name: String,
-    pub email: String,
 }
 
 #[derive(Serialize, Deserialize)]

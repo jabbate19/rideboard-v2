@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, Executor, Postgres};
 use utoipa::ToSchema;
 
-use crate::app::UserData;
+use crate::db::user::UserData;
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

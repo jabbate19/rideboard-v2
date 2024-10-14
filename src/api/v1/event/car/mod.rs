@@ -1,7 +1,7 @@
 use crate::api::v1::auth::models::UserInfo;
 use crate::app::{AppState, MultipleRiderChange, RedisJob};
 use crate::db::car::{Car, CarData};
-use crate::{api::v1::auth::models::UserData, auth::SessionAuth};
+use crate::{auth::SessionAuth, db::user::UserData};
 use actix_session::Session;
 use actix_web::{
     delete, get, post, put,

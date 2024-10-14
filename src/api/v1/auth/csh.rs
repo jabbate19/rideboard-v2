@@ -1,14 +1,16 @@
-use crate::api::v1::auth::models::UserRealm;
 use crate::api::v1::auth::models::{CSHUserInfo, UserInfo};
 use crate::app::AppState;
+use crate::db::user::{UserData, UserRealm};
 use actix_session::Session;
 use actix_web::http::header;
 use actix_web::{get, Scope};
 use actix_web::{web, HttpResponse, Responder};
+use log::error;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse};
 use reqwest::Client;
 use serde::Deserialize;
+use serde_json::json;
 use utoipa::{OpenApi, ToSchema};
 
 use crate::api::v1::auth::common;
@@ -70,15 +72,20 @@ async fn auth(
         .await
         .unwrap();
 
-    sqlx::query!(
-        "INSERT INTO users (id, realm, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET realm = EXCLUDED.realm, name = EXCLUDED.name, email = EXCLUDED.email;",
-        user_info.ldap_id,
-        UserRealm::Csh as _,
+    if let Err(err) = UserData::insert_new(
+        user_info.ldap_id.clone(),
+        UserRealm::Csh,
         format!("{} {}", user_info.given_name, user_info.family_name),
-        user_info.email
+        user_info.email.clone(),
+        &data.db,
     )
-    .execute(&data.db)
-    .await.unwrap();
+    .await
+    {
+        error!("{}", err);
+        return HttpResponse::InternalServerError().json(json!({
+            "error": "Failed to add user to database"
+        }));
+    }
 
     session.insert("login", true).unwrap();
     session
