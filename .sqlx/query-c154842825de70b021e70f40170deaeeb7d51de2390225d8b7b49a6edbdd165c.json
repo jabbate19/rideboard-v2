@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id AS \"id!\", realm::text AS \"realm!\", name AS \"name!\", email AS \"email!\"\n        FROM users WHERE id IN (SELECT UNNEST($1::VARCHAR[]))\n        ",
+  "query": "\n            SELECT users.id AS \"id!\", users.realm::text AS \"realm!\", users.name AS \"name!\", users.email AS \"email!\"\n            FROM users where id = $1;\n            ",
   "describe": {
     "columns": [
       {
@@ -26,7 +26,7 @@
     ],
     "parameters": {
       "Left": [
-        "VarcharArray"
+        "Text"
       ]
     },
     "nullable": [
@@ -36,5 +36,5 @@
       false
     ]
   },
-  "hash": "1c32092df89c5163785b7f002b721c7e480e82712d5a7a19516f254f14f04eb8"
+  "hash": "c154842825de70b021e70f40170deaeeb7d51de2390225d8b7b49a6edbdd165c"
 }
