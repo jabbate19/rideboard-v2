@@ -6,10 +6,8 @@ use anyhow::anyhow;
 use base64::prelude::*;
 use include_dir::{include_dir, Dir};
 use log::info;
-use oauth2::basic::BasicClient;
-use redis::aio::MultiplexedConnection;
 use redis_work_queue::KeyPrefix;
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::sync::{Arc, Mutex};
 
@@ -43,9 +41,6 @@ async fn serve_index() -> impl Responder {
 }
 
 pub async fn main() -> std::io::Result<()> {
-    env_logger::init();
-    dotenv::dotenv().ok();
-
     let host = env::var("HOST").unwrap_or("127.0.0.1".to_string());
     let host_inner = host.clone();
     let port: i32 = match &env::var("PORT").map(|port| port.parse()) {

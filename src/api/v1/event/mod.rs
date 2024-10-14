@@ -67,7 +67,7 @@ async fn create_event(
         Err(err) => {
             error!("{}", err);
             HttpResponse::InternalServerError().body("Failed to create event")
-        },
+        }
     }
 }
 
@@ -151,7 +151,7 @@ async fn update_event(
         Err(err) => {
             error!("{}", err);
             HttpResponse::InternalServerError().body("Failed to update event")
-        },
+        }
     }
 }
 
@@ -181,7 +181,7 @@ async fn delete_event(
         Err(err) => {
             error!("{}", err);
             HttpResponse::InternalServerError().body("Failed to delete event")
-        },
+        }
     }
 }
 

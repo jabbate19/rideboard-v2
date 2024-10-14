@@ -44,7 +44,7 @@ impl CarData {
             .map(|user| user.id)
             .collect();
         for rider in self.riders.iter() {
-            if other_car_members.contains(&rider) {
+            if other_car_members.contains(rider) {
                 errs.push(format!(
                     "{} is already in another car or is a driver.",
                     rider

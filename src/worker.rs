@@ -3,7 +3,8 @@ use std::{
     env,
 };
 
-use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult};
+use log::error;
+use redis::{aio::MultiplexedConnection, RedisResult};
 use redis_work_queue::{Item, KeyPrefix, WorkQueue};
 use sqlx::{postgres::PgPoolOptions, query, query_as, Pool, Postgres};
 use std::time::Duration;
@@ -110,7 +111,7 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
             }
             pings
                 .send_join(
-                    &driver.email.trim_end_matches("@csh.rit.edu"),
+                    driver.email.trim_end_matches("@csh.rit.edu"),
                     &rider.name,
                     &event_name,
                 )
@@ -124,7 +125,7 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
             }
             pings
                 .send_leave(
-                    &driver.email.trim_end_matches("@csh.rit.edu"),
+                    driver.email.trim_end_matches("@csh.rit.edu"),
                     &rider.name,
                     &event_name,
                 )
@@ -152,11 +153,15 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                 }
                 pings
                     .send_remove(
-                        &user.email.trim_end_matches("@csh.rit.edu"),
+                        user.email.trim_end_matches("@csh.rit.edu"),
                         &driver.name,
                         &event_name,
                     )
-                    .await;
+                    .await
+                    .map_err(|err| RedisError {
+                        msg: format!("Failed to send message: {}", err),
+                        should_retry: true,
+                    })?;
             }
             for added in new_set.difference(&old_set) {
                 let user = user_map.get(added).unwrap();
@@ -165,11 +170,15 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                 }
                 pings
                     .send_add(
-                        &user.email.trim_end_matches("@csh.rit.edu"),
+                        user.email.trim_end_matches("@csh.rit.edu"),
                         &driver.name,
                         &event_name,
                     )
-                    .await;
+                    .await
+                    .map_err(|err| RedisError {
+                        msg: format!("Failed to send message: {}", err),
+                        should_retry: true,
+                    })?;
             }
         }
     }
@@ -195,10 +204,11 @@ pub async fn work_loop(
             }
             // Drop a job that should be retried - it will be returned to the work queue after
             // the (5 second) lease expires.
-            Err(err) if err.should_retry => (),
+            Err(err) if err.should_retry => error!("{}", err.msg),
             // Errors that shouldn't cause a retry should mark the job as complete so it isn't
             // tried again.
             Err(err) => {
+                error!("{}", err.msg);
                 work_queue.complete(&mut db, &job).await?;
             }
         }

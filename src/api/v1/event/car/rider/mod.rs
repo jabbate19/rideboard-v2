@@ -12,7 +12,6 @@ use log::error;
 use redis_work_queue::{Item, WorkQueue};
 use serde_json::json;
 use sqlx::query;
-use utoipa::openapi::security::Http;
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
@@ -42,14 +41,14 @@ async fn create_rider(
             if car.max_capacity <= car.riders.unwrap().len() as i32 {
                 return HttpResponse::BadRequest().json(json!({
                     "error": "Car is full."
-                }))
+                }));
             }
-        },
+        }
         Ok(None) => {
             return HttpResponse::BadRequest().json(json!({
                 "error": "Car does not exist."
             }))
-        },
+        }
         Err(err) => {
             error!("{}", err);
             return HttpResponse::InternalServerError().body("Unable to Join Car");
@@ -157,7 +156,7 @@ async fn delete_rider(
         Err(err) => {
             error!("{}", err);
             HttpResponse::InternalServerError().body("Failed to delete rider")
-        },
+        }
     }
 }
 

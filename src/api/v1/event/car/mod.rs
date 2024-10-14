@@ -59,8 +59,9 @@ async fn create_car(
         }));
     }
 
-    let record = Car::insert_new(event_id, user_id, &car, &mut *tx).await
-    .unwrap();
+    let record = Car::insert_new(event_id, user_id, &car, &mut *tx)
+        .await
+        .unwrap();
 
     let _ = query!(
         r#"
@@ -78,7 +79,7 @@ async fn create_car(
         event_id,
         car_id: record.id,
         old_riders: Vec::new(),
-        new_riders: car.riders.clone()
+        new_riders: car.riders.clone(),
     }))
     .unwrap();
     let mut redis = data.redis.lock().unwrap().clone();
@@ -105,7 +106,7 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
     match result {
         Ok(Some(car)) => HttpResponse::Ok().json(car),
         Ok(None) => HttpResponse::NotFound().body("Car not found"),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to get Car")
+        Err(_) => HttpResponse::InternalServerError().body("Failed to get Car"),
     }
 }
 
@@ -149,7 +150,12 @@ async fn update_car(
     let (event_id, car_id) = path.into_inner();
     let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
     let mut tx = data.db.begin().await.unwrap();
-    let other_cars = Car::select_all(event_id, &mut *tx).await.unwrap().into_iter().filter(|car| car.id != car_id).collect();
+    let other_cars = Car::select_all(event_id, &mut *tx)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|car| car.id != car_id)
+        .collect();
     if let Err(errs) = car.validate(&user_id, other_cars) {
         tx.rollback().await.unwrap();
         return HttpResponse::BadRequest().json(json!({
@@ -200,7 +206,7 @@ async fn update_car(
         event_id,
         car_id,
         old_riders: current_riders,
-        new_riders: car.riders.clone()
+        new_riders: car.riders.clone(),
     }))
     .unwrap();
     let mut redis = data.redis.lock().unwrap().clone();
@@ -236,7 +242,7 @@ async fn delete_car(
         Err(err) => {
             error!("{}", err);
             HttpResponse::InternalServerError().body("Failed to delete car")
-        },
+        }
     }
 }
 

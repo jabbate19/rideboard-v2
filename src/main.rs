@@ -26,6 +26,9 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
+    dotenv::dotenv().ok();
+
     let cli = Cli::parse();
 
     match &cli.command {
