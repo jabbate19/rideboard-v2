@@ -46,7 +46,7 @@ impl PingClient {
             ))
             .json(&json!({
                 "username": to,
-                "body": format!("@{join} joined your ride to \"{event}\".")
+                "body": format!("{join} joined your ride to \"{event}\".")
             }))
             .send()
             .await?;
@@ -61,7 +61,7 @@ impl PingClient {
             ))
             .json(&json!({
                 "username": to,
-                "body": format!("@{leave} left your ride \"{event}\".")
+                "body": format!("{leave} left your ride \"{event}\".")
             }))
             .send()
             .await?;

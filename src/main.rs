@@ -1,6 +1,7 @@
 pub mod api;
 pub mod app;
 mod auth;
+pub mod db;
 pub mod pings;
 mod server;
 mod worker;

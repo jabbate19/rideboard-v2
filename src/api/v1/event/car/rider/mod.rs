@@ -1,7 +1,6 @@
-use std::borrow::BorrowMut;
-
 use crate::app::{AppState, SimpleRiderChange};
 use crate::auth::SessionAuth;
+use crate::db::car::Car;
 use crate::{api::v1::event::UserInfo, app::RedisJob};
 use actix_session::Session;
 use actix_web::{
@@ -11,7 +10,9 @@ use actix_web::{
 };
 use log::error;
 use redis_work_queue::{Item, WorkQueue};
+use serde_json::json;
 use sqlx::query;
+use utoipa::openapi::security::Http;
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
@@ -36,7 +37,26 @@ async fn create_rider(
     let (event_id, car_id) = path.into_inner();
     let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
 
-    let check = query!(
+    match Car::select_one(event_id, car_id, &data.db).await {
+        Ok(Some(car)) => {
+            if car.max_capacity <= car.riders.unwrap().len() as i32 {
+                return HttpResponse::BadRequest().json(json!({
+                    "error": "Car is full."
+                }))
+            }
+        },
+        Ok(None) => {
+            return HttpResponse::BadRequest().json(json!({
+                "error": "Car does not exist."
+            }))
+        },
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError().body("Unable to Join Car");
+        }
+    }
+
+    let user_in_car = query!(
         r#"
         SELECT COUNT(*) as count
         FROM (
@@ -55,7 +75,7 @@ async fn create_rider(
     .await
     .unwrap();
 
-    if check.count.unwrap() > 0 {
+    if user_in_car.count.unwrap() > 0 {
         return HttpResponse::BadRequest().body("User is already in a car.");
     }
 
@@ -134,7 +154,10 @@ async fn delete_rider(
                 .expect("failed to add item to work queue");
             HttpResponse::Ok().body("Rider deleted")
         }
-        Err(_) => HttpResponse::InternalServerError().body("Failed to delete rider"),
+        Err(err) => {
+            error!("{}", err);
+            HttpResponse::InternalServerError().body("Failed to delete rider")
+        },
     }
 }
 
