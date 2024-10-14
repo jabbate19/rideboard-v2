@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n        event.id, event.name, event.location, event.start_time, event.end_time,\n        (users.id, users.realm::text, users.name, users.email) AS \"creator!: UserData\"\n        FROM event\n        JOIN users ON users.id = event.creator\n        WHERE (end_time >= NOW() AND $1 = False) OR (end_time < NOW() AND $1)\n        ORDER BY start_time ASC\n        ",
+  "query": "\n            WITH new_event AS (\n                INSERT INTO event (name, location, start_time, end_time, creator) VALUES ($1, $2, $3, $4, $5) RETURNING *\n            )\n            SELECT new_event.id, new_event.name, new_event.location, new_event.start_time, new_event.end_time,\n            (users.id, users.realm, users.name, users.email) AS \"creator!: UserData\"\n            FROM new_event LEFT JOIN users ON new_event.creator = users.id\n            ",
   "describe": {
     "columns": [
       {
@@ -36,7 +36,11 @@
     ],
     "parameters": {
       "Left": [
-        "Bool"
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz",
+        "Varchar"
       ]
     },
     "nullable": [
@@ -48,5 +52,5 @@
       null
     ]
   },
-  "hash": "e8fe0db6febdd7052c847d5d1b9dbbcae5c1d53e7e94c0df105594ab97286a26"
+  "hash": "960795ad9f2fec9f080c16a2570dc13e2c1ef472b769810e5e7e0b70624f0081"
 }
