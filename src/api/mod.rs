@@ -2,6 +2,8 @@ use actix_web::{body::BoxBody, web, HttpResponse, Scope};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::app::ApiError;
+
 mod v1;
 
 #[derive(OpenApi)]
@@ -9,6 +11,7 @@ mod v1;
     nest(
         (path = "/api/v1", api = v1::ApiDoc)
     ),
+    components(schemas(ApiError))
 )]
 pub(super) struct ApiDoc;
 

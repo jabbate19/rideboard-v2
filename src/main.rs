@@ -3,9 +3,11 @@ pub mod app;
 mod auth;
 pub mod db;
 pub mod pings;
+pub mod redis;
 mod server;
 mod worker;
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -25,7 +27,7 @@ enum Commands {
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     env_logger::init();
     dotenv::dotenv().ok();
 

@@ -36,9 +36,14 @@ impl CarData {
         }
         let other_car_members: Vec<String> = other_cars
             .iter()
-            .flat_map(|car| {
-                let mut out = car.riders.clone().unwrap();
-                out.push(car.driver.clone());
+            .filter_map(|car| {
+                car.riders
+                    .clone()
+                    .map(|riders| (riders, car.driver.clone()))
+            })
+            .flat_map(|(riders, driver)| {
+                let mut out = riders;
+                out.push(driver);
                 out
             })
             .map(|user| user.id)
@@ -201,6 +206,34 @@ impl Car {
         )
         .fetch_optional(conn)
         .await.map_err(|err| anyhow!("Failed to get car: {}", err))
+    }
+    pub async fn user_in_car<'c, C>(event_id: i32, user_id: &String, conn: C) -> Result<bool>
+    where
+        C: Executor<'c, Database = Postgres>,
+    {
+        match query!(
+            r#"
+            SELECT COUNT(*) as count
+            FROM (
+                SELECT id FROM car
+                WHERE event_id = $1 AND driver = $2 
+                UNION
+                SELECT rider.car_id 
+                FROM rider 
+                JOIN car ON rider.car_id = car.id 
+                WHERE car.event_id = $1 AND rider.rider = $2
+            ) AS data"#,
+            event_id,
+            user_id
+        )
+        .fetch_one(conn)
+        .await
+        .map(|record| record.count)
+        {
+            Ok(Some(count)) => Ok(count > 0),
+            Ok(None) => Err(anyhow!("Failed to get Car Data")),
+            Err(err) => Err(anyhow!("Failed to get Car Data: {}", err)),
+        }
     }
     pub async fn delete<'c, C>(
         id: i32,

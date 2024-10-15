@@ -1,5 +1,5 @@
 use crate::api::v1::auth::models::{CSHUserInfo, UserInfo};
-use crate::app::AppState;
+use crate::app::{ApiError, AppState};
 use crate::db::user::{UserData, UserRealm};
 use actix_session::Session;
 use actix_web::http::header;
@@ -10,10 +10,9 @@ use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse};
 use reqwest::Client;
 use serde::Deserialize;
-use serde_json::json;
 use utoipa::{OpenApi, ToSchema};
 
-use crate::api::v1::auth::common;
+use crate::api::v1::auth::common::{self, login_session};
 
 #[derive(OpenApi)]
 #[openapi(paths(login, auth,), components(schemas(AuthRequest)))]
@@ -21,7 +20,7 @@ pub(super) struct ApiDoc;
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Redirect to OAuth2 Link to Log In")
+        (status = 200, description = "OAuth2 Link to Log In")
     )
 )]
 #[get("/")]
@@ -42,7 +41,8 @@ pub struct AuthRequest {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Redirect to OAuth2 to verify code and update user info.")
+        (status = 302, description = "Successful login, Redirect to home page."),
+        (status = 500, body = ApiError)
     )
 )]
 #[get("/redirect")]
@@ -53,24 +53,43 @@ async fn auth(
 ) -> impl Responder {
     let code = AuthorizationCode::new(params.code.clone());
 
-    let token = &data
+    let token = match &data
         .csh_oauth
         .exchange_code(code)
         .request_async(async_http_client)
         .await
-        .unwrap();
+    {
+        Ok(token) => token.access_token().secret().clone(),
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to get OAuth Token".to_string()));
+        }
+    };
 
     let client = Client::new();
 
-    let user_info: CSHUserInfo = client
+    let user_info: CSHUserInfo = match client
         .get(&data.csh_userinfo_url)
-        .bearer_auth(token.access_token().secret())
+        .bearer_auth(token)
         .send()
         .await
-        .unwrap()
-        .json()
-        .await
-        .unwrap();
+    {
+        Ok(res) => match res.json().await {
+            Ok(out) => out,
+            Err(err) => {
+                error!("{}", err);
+                return HttpResponse::InternalServerError().json(ApiError::from(
+                    "Failed to deserialize UserInfo token".to_string(),
+                ));
+            }
+        },
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to get UserInfo Token".to_string()));
+        }
+    };
 
     if let Err(err) = UserData::insert_new(
         user_info.ldap_id.clone(),
@@ -82,15 +101,15 @@ async fn auth(
     .await
     {
         error!("{}", err);
-        return HttpResponse::InternalServerError().json(json!({
-            "error": "Failed to add user to database"
-        }));
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to add user to database".to_string()));
     }
 
-    session.insert("login", true).unwrap();
-    session
-        .insert("userinfo", UserInfo::from(user_info))
-        .unwrap();
+    if let Err(err) = login_session(&session, UserInfo::from(user_info)) {
+        error!("{}", err);
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to Authorize Session".to_string()));
+    }
 
     HttpResponse::Found()
         .append_header((header::LOCATION, "/"))

@@ -1,4 +1,4 @@
-use crate::app::{AppState, SimpleRiderChange};
+use crate::app::{ApiError, AppState, SimpleRiderChange};
 use crate::auth::SessionAuth;
 use crate::db::car::Car;
 use crate::{api::v1::event::UserInfo, app::RedisJob};
@@ -9,9 +9,6 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use log::error;
-use redis_work_queue::{Item, WorkQueue};
-use serde_json::json;
-use sqlx::query;
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
@@ -24,7 +21,10 @@ pub struct ApiDoc;
         ("car_id" = i32, Path, description = "ID of the Car this Rider Applies To")
     ),
     responses(
-        (status = 200, description = "Add a rider to a car.")
+        (status = 200, description = "Add a rider to a car."),
+        (status = 400, body = ApiError),
+        (status = 401, body = ApiError),
+        (status = 500, body = ApiError)
     )
 )]
 #[post("/", wrap = "SessionAuth")]
@@ -34,51 +34,47 @@ async fn create_rider(
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
 
     match Car::select_one(event_id, car_id, &data.db).await {
         Ok(Some(car)) => {
-            if car.max_capacity <= car.riders.unwrap().len() as i32 {
-                return HttpResponse::BadRequest().json(json!({
-                    "error": "Car is full."
-                }));
+            if car.max_capacity <= car.riders.map(|riders| riders.len()).unwrap_or(0) as i32 {
+                return HttpResponse::BadRequest().json(ApiError::from("Car is full.".to_string()));
             }
         }
         Ok(None) => {
-            return HttpResponse::BadRequest().json(json!({
-                "error": "Car does not exist."
-            }))
+            return HttpResponse::BadRequest()
+                .json(ApiError::from("Car does not exist.".to_string()))
         }
         Err(err) => {
             error!("{}", err);
-            return HttpResponse::InternalServerError().body("Unable to Join Car");
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to check car capacity".to_string()));
         }
     }
 
-    let user_in_car = query!(
-        r#"
-        SELECT COUNT(*) as count
-        FROM (
-            SELECT id FROM car
-            WHERE event_id = $1 AND driver = $2 
-            UNION
-            SELECT rider.car_id 
-            FROM rider 
-            JOIN car ON rider.car_id = car.id 
-            WHERE car.event_id = $1 AND rider.rider = $2
-        ) AS data"#,
-        event_id,
-        user_id
-    )
-    .fetch_one(&data.db)
-    .await
-    .unwrap();
-
-    if user_in_car.count.unwrap() > 0 {
-        return HttpResponse::BadRequest().body("User is already in a car.");
+    match Car::user_in_car(event_id, &user_id, &data.db).await {
+        Ok(false) => {}
+        Ok(true) => {
+            return HttpResponse::BadRequest()
+                .json(ApiError::from("User is already in a car.".to_string()))
+        }
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError().json(ApiError::from(
+                "Failed to check user's occupancy in other cars".to_string(),
+            ));
+        }
     }
 
-    let result = sqlx::query!(
+    if let Err(err) = sqlx::query!(
         r#"
         INSERT INTO rider (car_id, rider) VALUES ($1, $2)
         "#,
@@ -86,29 +82,30 @@ async fn create_rider(
         user_id
     )
     .execute(&data.db)
-    .await;
+    .await
+    {
+        error!("{}", err);
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to join ride".to_string()));
+    };
 
-    match result {
-        Ok(_) => {
-            let work_queue = WorkQueue::new(data.work_queue_key.clone());
-            let item = Item::from_json_data(&RedisJob::Join(SimpleRiderChange {
+    match data.redis.lock().map(|mut mutex| async move {
+        mutex
+            .insert_job(RedisJob::Join(SimpleRiderChange {
                 event_id,
                 car_id,
                 rider_id: user_id,
             }))
-            .unwrap();
-            let mut redis = data.redis.lock().unwrap().clone();
-            work_queue
-                .add_item(&mut redis, &item)
-                .await
-                .expect("failed to add item to work queue");
-            HttpResponse::Ok().body("Joined Car")
+            .await
+    }) {
+        Ok(res) => {
+            if let Err(err) = res.await {
+                error!("{}", err);
+            }
         }
-        Err(e) => {
-            error!("Failed to Add Rider: {}", e);
-            HttpResponse::InternalServerError().body("Failed to create car")
-        }
+        Err(err) => error!("{}", err),
     }
+    HttpResponse::Ok().body("Joined Car")
 }
 
 #[utoipa::path(
@@ -117,7 +114,9 @@ async fn create_rider(
         ("car_id" = i32, Path, description = "ID of the Car this Rider Applies To")
     ),
     responses(
-        (status = 200, description = "Remove other rider from car. Must be done by driver.")
+        (status = 200, description = "Remove other rider from car. Must be done by driver."),
+        (status = 401, body = ApiError),
+        (status = 500, body = ApiError)
     )
 )]
 #[delete("/", wrap = "SessionAuth")]
@@ -127,37 +126,46 @@ async fn delete_rider(
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
 
-    let deleted = sqlx::query!(
+    if let Err(err) = sqlx::query!(
         "DELETE FROM rider WHERE car_id = $1 AND rider = $2",
         car_id,
         user_id
     )
     .execute(&data.db)
-    .await;
+    .await
+    {
+        error!("{}", err);
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to delete rider".to_string()));
+    }
 
-    match deleted {
-        Ok(_) => {
-            let work_queue = WorkQueue::new(data.work_queue_key.clone());
-            let item = Item::from_json_data(&RedisJob::Leave(SimpleRiderChange {
+    match data.redis.lock().map(|mut mutex| async move {
+        mutex
+            .insert_job(RedisJob::Leave(SimpleRiderChange {
                 event_id,
                 car_id,
                 rider_id: user_id,
             }))
-            .unwrap();
-            let mut redis = data.redis.lock().unwrap().clone();
-            work_queue
-                .add_item(&mut redis, &item)
-                .await
-                .expect("failed to add item to work queue");
-            HttpResponse::Ok().body("Rider deleted")
+            .await
+    }) {
+        Ok(res) => {
+            if let Err(err) = res.await {
+                error!("{}", err);
+            }
         }
-        Err(err) => {
-            error!("{}", err);
-            HttpResponse::InternalServerError().body("Failed to delete rider")
-        }
+        Err(err) => error!("{}", err),
     }
+
+    HttpResponse::Ok().body("Rider deleted")
 }
 
 pub fn scope() -> Scope {

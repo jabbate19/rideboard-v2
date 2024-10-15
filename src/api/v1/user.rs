@@ -1,8 +1,7 @@
 use actix_web::{get, web, HttpResponse, Responder, Scope};
 use serde::Deserialize;
-use sqlx::query_as;
 
-use crate::app::AppState;
+use crate::app::{ApiError, AppState};
 use crate::auth::SessionAuth;
 
 use utoipa::OpenApi;
@@ -20,7 +19,8 @@ struct UserSearchParams {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Get all users matching search", body = [UserData])
+        (status = 200, description = "Get all users matching search", body = [UserData]),
+        (status = 500, body = ApiError)
     )
 )]
 #[get("/", wrap = "SessionAuth")]
@@ -30,13 +30,12 @@ async fn user_search(
 ) -> impl Responder {
     let query = format!("%{}%", params.query.to_lowercase());
 
-    let result = query_as!(UserData, r#"SELECT id AS "id!", realm::text AS "realm!", name AS "name!", email AS "email!" FROM users WHERE LOWER(name) LIKE $1 OR LOWER(email) LIKE $1;"#, query)
-        .fetch_all(&data.db)
-        .await;
+    let result = UserData::select_search(query, &data.db).await;
 
     match result {
-        Ok(events) => HttpResponse::Ok().json(events),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to get events"),
+        Ok(users) => HttpResponse::Ok().json(users),
+        Err(_) => HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to get events".to_string())),
     }
 }
 

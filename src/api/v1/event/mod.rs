@@ -1,5 +1,6 @@
 use crate::{
     api::v1::auth::models::UserInfo,
+    app::ApiError,
     db::event::{Event, EventData},
 };
 use actix_session::Session;
@@ -10,7 +11,6 @@ use actix_web::{
 };
 use log::error;
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::app::AppState;
 use crate::auth::SessionAuth;
@@ -39,7 +39,10 @@ pub(super) struct ApiDoc;
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Create New Event. Returns ID", body = i32)
+        (status = 200, description = "Create New Event. Returns ID", body = i32),
+        (status = 400, body = ApiError),
+        (status = 401, body = ApiError),
+        (status = 500, body = ApiError),
     )
 )]
 #[post("/", wrap = "SessionAuth")]
@@ -48,42 +51,50 @@ async fn create_event(
     session: Session,
     event: web::Json<EventData>,
 ) -> impl Responder {
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
+
     if let Err(errs) = event.validate() {
-        return HttpResponse::BadRequest().json(json!(
-            {
-                "errors": errs
-            }
-        ));
+        return HttpResponse::BadRequest().json(ApiError::from(errs));
     }
-    let result = Event::insert_new(
-        &event,
-        session.get::<UserInfo>("userinfo").unwrap().unwrap().id,
-        &data.db,
-    )
-    .await;
+    let result = Event::insert_new(&event, user_id, &data.db).await;
 
     match result {
         Ok(record) => HttpResponse::Ok().json(record.id),
         Err(err) => {
             error!("{}", err);
-            HttpResponse::InternalServerError().body("Failed to create event")
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to create event".to_string()))
         }
     }
 }
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Get event specified by ID", body = Event)
+        (status = 200, description = "Get event specified by ID", body = Event),
+        (status = 404, body = ApiError),
+        (status = 500, body = ApiError),
     )
 )]
 #[get("/{event_id}", wrap = "SessionAuth")]
 async fn get_event(data: web::Data<AppState>, path: web::Path<i32>) -> impl Responder {
     let event_id = path.into_inner();
-    let result = Event::select_one(event_id, &data.db).await.unwrap();
+    let result = Event::select_one(event_id, &data.db).await;
 
     match result {
-        Some(user) => HttpResponse::Ok().json(user),
-        None => HttpResponse::NotFound().body("Event not found"),
+        Ok(Some(user)) => HttpResponse::Ok().json(user),
+        Ok(None) => HttpResponse::NotFound().json(ApiError::from("Event not found".to_string())),
+        Err(err) => {
+            error!("{}", err);
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to get event".to_string()))
+        }
     }
 }
 
@@ -94,7 +105,8 @@ struct EventQueryParams {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Get all events", body = [Event])
+        (status = 200, description = "Get all events", body = [Event]),
+        (status = 500, body = ApiError),
     )
 )]
 #[get("/", wrap = "SessionAuth")]
@@ -110,14 +122,20 @@ async fn get_all_events(
         Ok(events) => HttpResponse::Ok().json(events),
         Err(e) => {
             error!("{}", e);
-            HttpResponse::InternalServerError().body("Failed to get events")
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to get events".to_string()))
         }
     }
 }
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Update event information")
+        (status = 200, description = "Update event information"),
+        (status = 400, body = ApiError),
+        (status = 403, body = ApiError),
+        (status = 404, body = ApiError),
+        (status = 500, body = ApiError),
+
     )
 )]
 #[put("/{event_id}", wrap = "SessionAuth")]
@@ -128,36 +146,40 @@ async fn update_event(
     event: web::Json<EventData>,
 ) -> impl Responder {
     let event_id = path.into_inner();
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
 
     if let Err(errs) = event.validate() {
-        return HttpResponse::BadRequest().json(json!(
-            {
-                "errors": errs
-            }
-        ));
+        return HttpResponse::BadRequest().json(ApiError::from(errs));
     }
 
-    let updated = Event::update(
-        event_id,
-        session.get::<UserInfo>("userinfo").unwrap().unwrap().id,
-        &event,
-        &data.db,
-    )
-    .await;
+    let updated = Event::update(event_id, user_id, &event, &data.db).await;
 
     match updated {
         Ok(Some(_)) => HttpResponse::Ok().body("Event updated successfully"),
-        Ok(None) => HttpResponse::NotFound().body("Event not found or you are not the creator."),
+        Ok(None) => HttpResponse::NotFound().json(ApiError::from(
+            "Event not found or you are not the creator".to_string(),
+        )),
         Err(err) => {
             error!("{}", err);
-            HttpResponse::InternalServerError().body("Failed to update event")
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to update event".to_string()))
         }
     }
 }
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Delete Event")
+        (status = 200, description = "Delete Event"),
+        (status = 401, body = ApiError),
+        (status = 404, body = ApiError),
+        (status = 500, body = ApiError),
     )
 )]
 #[delete("/{event_id}", wrap = "SessionAuth")]
@@ -167,20 +189,26 @@ async fn delete_event(
     path: web::Path<i32>,
 ) -> impl Responder {
     let event_id = path.into_inner();
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
 
-    let deleted = Event::delete(
-        event_id,
-        session.get::<UserInfo>("userinfo").unwrap().unwrap().id,
-        &data.db,
-    )
-    .await;
+    let deleted = Event::delete(event_id, user_id, &data.db).await;
 
     match deleted {
         Ok(Some(_)) => HttpResponse::Ok().body("Event deleted"),
-        Ok(None) => HttpResponse::NotFound().body("Event not found or you are not the creator."),
+        Ok(None) => HttpResponse::NotFound().json(ApiError::from(
+            "Event not found or you are not the creator".to_string(),
+        )),
         Err(err) => {
             error!("{}", err);
-            HttpResponse::InternalServerError().body("Failed to delete event")
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to delete event".to_string()))
         }
     }
 }

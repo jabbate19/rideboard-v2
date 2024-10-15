@@ -1,6 +1,10 @@
+use actix_session::Session;
 use actix_web::{HttpResponse, Responder};
+use anyhow::Result;
 use oauth2::basic::BasicClient;
 use oauth2::{CsrfToken, Scope as OAuthScope};
+
+use super::models::UserInfo;
 
 pub async fn login(client: &BasicClient, scopes: Vec<String>) -> impl Responder {
     //let (pkce_code_challenge, _pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -17,4 +21,10 @@ pub async fn login(client: &BasicClient, scopes: Vec<String>) -> impl Responder 
         .url();
 
     HttpResponse::Ok().body(authorize_url.to_string())
+}
+
+pub fn login_session(session: &Session, user_info: UserInfo) -> Result<()> {
+    session.insert("login", true)?;
+    session.insert("userinfo", user_info)?;
+    Ok(())
 }

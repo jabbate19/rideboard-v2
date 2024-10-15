@@ -46,6 +46,14 @@ impl UserData {
         .fetch_one(conn)
         .await.map_err(|err| anyhow!("Failed to insert/update user: {}", err))
     }
+    pub async fn select_search<'c, C>(query: String, conn: C) -> Result<Vec<Self>>
+    where
+        C: Executor<'c, Database = Postgres>,
+    {
+        query_as!(UserData, r#"SELECT id AS "id!", realm::text AS "realm!", name AS "name!", email AS "email!" FROM users WHERE LOWER(name) LIKE $1 OR LOWER(email) LIKE $1;"#, query.to_lowercase())
+        .fetch_all(conn)
+        .await.map_err(|err| anyhow!("Failed to get users: {}", err))
+    }
     pub async fn select_map<'c, C>(ids: Vec<String>, conn: C) -> Result<HashMap<String, Self>>
     where
         C: Executor<'c, Database = Postgres>,

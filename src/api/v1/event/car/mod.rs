@@ -1,5 +1,5 @@
 use crate::api::v1::auth::models::UserInfo;
-use crate::app::{AppState, MultipleRiderChange, RedisJob};
+use crate::app::{ApiError, AppState, MultipleRiderChange, RedisJob};
 use crate::db::car::{Car, CarData};
 use crate::{auth::SessionAuth, db::user::UserData};
 use actix_session::Session;
@@ -8,8 +8,6 @@ use actix_web::{
     web::{self},
     HttpResponse, Responder, Scope,
 };
-use redis_work_queue::{Item, WorkQueue};
-use serde_json::json;
 use sqlx::query;
 use utoipa::OpenApi;
 
@@ -38,7 +36,10 @@ pub struct ApiDoc;
         ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "Create new Car for Event.", body = i32)
+        (status = 200, description = "Create new Car for Event.", body = i32),
+        (status = 400, body = ApiError),
+        (status = 401, body = ApiError),
+        (status = 500, body = ApiError),
     )
 )]
 #[post("/", wrap = "SessionAuth")]
@@ -49,21 +50,49 @@ async fn create_car(
     path: web::Path<i32>,
 ) -> impl Responder {
     let event_id: i32 = path.into_inner();
-    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
-    let mut tx = data.db.begin().await.unwrap();
-    let other_cars = Car::select_all(event_id, &mut *tx).await.unwrap();
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
+
+    let other_cars = match Car::select_all(event_id, &data.db).await {
+        Ok(cars) => cars,
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError().json(ApiError::from(
+                "Failed to get other cars for data validation".to_string(),
+            ));
+        }
+    };
     if let Err(errs) = car.validate(&user_id, other_cars) {
-        tx.rollback().await.unwrap();
-        return HttpResponse::BadRequest().json(json!({
-            "errors": errs
-        }));
+        return HttpResponse::BadRequest().json(ApiError::from(errs));
     }
 
-    let record = Car::insert_new(event_id, user_id, &car, &mut *tx)
-        .await
-        .unwrap();
+    let mut tx = match data.db.begin().await {
+        Ok(tx) => tx,
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to make SQL Transaction".to_string()));
+        }
+    };
 
-    let _ = query!(
+    let record = match Car::insert_new(event_id, user_id, &car, &mut *tx).await {
+        Ok(car) => car,
+        Err(err) => {
+            error!("{}", err);
+            tx.rollback().await.unwrap();
+            return HttpResponse::InternalServerError().json(ApiError::from(
+                "Failed to create new car in database".to_string(),
+            ));
+        }
+    };
+
+    if let Err(err) = query!(
         r#"
         INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
         "#,
@@ -72,21 +101,34 @@ async fn create_car(
     )
     .execute(&mut *tx)
     .await
-    .unwrap();
-    tx.commit().await.unwrap();
-    let work_queue = WorkQueue::new(data.work_queue_key.clone());
-    let item = Item::from_json_data(&RedisJob::RiderUpdate(MultipleRiderChange {
-        event_id,
-        car_id: record.id,
-        old_riders: Vec::new(),
-        new_riders: car.riders.clone(),
-    }))
-    .unwrap();
-    let mut redis = data.redis.lock().unwrap().clone();
-    work_queue
-        .add_item(&mut redis, &item)
-        .await
-        .expect("failed to add item to work queue");
+    {
+        error!("{}", err);
+        tx.rollback().await.unwrap();
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to add riders to car".to_string()));
+    }
+    if let Err(err) = tx.commit().await {
+        error!("{}", err);
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to commit transaction".to_string()));
+    }
+    match data.redis.lock().map(|mut mutex| async move {
+        mutex
+            .insert_job(RedisJob::RiderUpdate(MultipleRiderChange {
+                event_id,
+                car_id: record.id,
+                old_riders: Vec::new(),
+                new_riders: car.riders.clone(),
+            }))
+            .await
+    }) {
+        Ok(res) => {
+            if let Err(err) = res.await {
+                error!("{}", err);
+            }
+        }
+        Err(err) => error!("{}", err),
+    }
     HttpResponse::Ok().json(record.id)
 }
 
@@ -95,7 +137,9 @@ async fn create_car(
         ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "Get car by ID", body = CarData)
+        (status = 200, description = "Get car by ID", body = CarData),
+        (status = 404, body = ApiError),
+        (status = 500, body = ApiError)
     )
 )]
 #[get("/{car_id}", wrap = "SessionAuth")]
@@ -105,8 +149,9 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
 
     match result {
         Ok(Some(car)) => HttpResponse::Ok().json(car),
-        Ok(None) => HttpResponse::NotFound().body("Car not found"),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to get Car"),
+        Ok(None) => HttpResponse::NotFound().json(ApiError::from("Car not found".to_string())),
+        Err(_) => HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to get Car".to_string())),
     }
 }
 
@@ -115,7 +160,8 @@ async fn get_car(data: web::Data<AppState>, path: web::Path<(i32, i32)>) -> impl
         ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "Get all cars for event", body = [CarData])
+        (status = 200, description = "Get all cars for event", body = [CarData]),
+        (status = 500, body = ApiError)
     )
 )]
 #[get("/", wrap = "SessionAuth")]
@@ -127,7 +173,8 @@ async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
         Ok(cars) => HttpResponse::Ok().json(cars),
         Err(e) => {
             error!("{}", e);
-            HttpResponse::InternalServerError().body("Failed to get cars")
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to get cars".to_string()))
         }
     }
 }
@@ -137,7 +184,11 @@ async fn get_all_cars(data: web::Data<AppState>, path: web::Path<i32>) -> impl R
         ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "Update Car")
+        (status = 200, description = "Update Car"),
+        (status = 400, body = ApiError),
+        (status = 401, body = ApiError),
+        (status = 404, body = ApiError),
+        (status = 500, body = ApiError)
     )
 )]
 #[put("/{car_id}", wrap = "SessionAuth")]
@@ -148,48 +199,73 @@ async fn update_car(
     car: web::Json<CarData>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
-    let mut tx = data.db.begin().await.unwrap();
-    let other_cars = Car::select_all(event_id, &mut *tx)
-        .await
-        .unwrap()
-        .into_iter()
-        .filter(|car| car.id != car_id)
-        .collect();
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
+
+    let other_cars = match Car::select_all(event_id, &data.db).await {
+        Ok(cars) => cars.into_iter().filter(|car| car.id != car_id).collect(),
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError().json(ApiError::from(
+                "Failed to get other cars for data validation".to_string(),
+            ));
+        }
+    };
     if let Err(errs) = car.validate(&user_id, other_cars) {
-        tx.rollback().await.unwrap();
-        return HttpResponse::BadRequest().json(json!({
-            "errors": errs
-        }));
+        return HttpResponse::BadRequest().json(ApiError::from(errs));
     }
+
+    let mut tx = match data.db.begin().await {
+        Ok(tx) => tx,
+        Err(err) => {
+            error!("{}", err);
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to make SQL Transaction".to_string()));
+        }
+    };
+
     let updated = Car::update(car_id, event_id, user_id, &car, &mut *tx).await;
 
     match updated {
         Ok(Some(_)) => {}
         Ok(None) => {
             tx.rollback().await.unwrap();
-            return HttpResponse::NotFound().body("Car not found or you are not the driver.");
+            return HttpResponse::NotFound().json(ApiError::from(
+                "Car not found or you are not the driver.".to_string(),
+            ));
         }
         Err(err) => {
             tx.rollback().await.unwrap();
             error!("{}", err);
-            return HttpResponse::InternalServerError().body("Failed to update car");
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to update car".to_string()));
         }
     }
 
     // Used for sending pings
-    let current_riders: Vec<String> = query!(
+    let current_riders: Vec<String> = match query!(
         r#"DELETE FROM rider WHERE car_id = $1 RETURNING rider"#,
         car_id
     )
     .fetch_all(&mut *tx)
     .await
-    .unwrap()
-    .iter()
-    .map(|record| record.rider.clone())
-    .collect();
+    {
+        Ok(riders) => riders.iter().map(|record| record.rider.clone()).collect(),
+        Err(err) => {
+            error!("{}", err);
+            tx.rollback().await.unwrap();
+            return HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to remove old riders".to_string()));
+        }
+    };
 
-    let _ = query!(
+    if let Err(err) = query!(
         r#"
         INSERT INTO rider (car_id, rider) SELECT $1, * FROM UNNEST($2::VARCHAR[])
         "#,
@@ -198,22 +274,35 @@ async fn update_car(
     )
     .execute(&mut *tx)
     .await
-    .unwrap();
-    tx.commit().await.unwrap();
+    {
+        error!("{}", err);
+        tx.rollback().await.unwrap();
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to add new riders".to_string()));
+    }
+    if let Err(err) = tx.commit().await {
+        error!("{}", err);
+        return HttpResponse::InternalServerError()
+            .json(ApiError::from("Failed to commit transaction".to_string()));
+    }
 
-    let work_queue = WorkQueue::new(data.work_queue_key.clone());
-    let item = Item::from_json_data(&RedisJob::RiderUpdate(MultipleRiderChange {
-        event_id,
-        car_id,
-        old_riders: current_riders,
-        new_riders: car.riders.clone(),
-    }))
-    .unwrap();
-    let mut redis = data.redis.lock().unwrap().clone();
-    work_queue
-        .add_item(&mut redis, &item)
-        .await
-        .expect("failed to add item to work queue");
+    match data.redis.lock().map(|mut mutex| async move {
+        mutex
+            .insert_job(RedisJob::RiderUpdate(MultipleRiderChange {
+                event_id,
+                car_id,
+                old_riders: current_riders,
+                new_riders: car.riders.clone(),
+            }))
+            .await
+    }) {
+        Ok(res) => {
+            if let Err(err) = res.await {
+                error!("{}", err);
+            }
+        }
+        Err(err) => error!("{}", err),
+    }
     HttpResponse::Ok().body("Car updated successfully")
 }
 
@@ -222,7 +311,10 @@ async fn update_car(
         ("event_id" = i32, Path, description = "ID of the Event this Car Applies To")
     ),
     responses(
-        (status = 200, description = "Delete Car")
+        (status = 200, description = "Delete Car"),
+        (status = 401, body = ApiError),
+        (status = 404, body = ApiError),
+        (status = 500, body = ApiError),
     )
 )]
 #[delete("/{car_id}", wrap = "SessionAuth")]
@@ -232,16 +324,26 @@ async fn delete_car(
     path: web::Path<(i32, i32)>,
 ) -> impl Responder {
     let (event_id, car_id) = path.into_inner();
-    let user_id = session.get::<UserInfo>("userinfo").unwrap().unwrap().id;
+    let user_id = match session.get::<UserInfo>("userinfo").ok().flatten() {
+        Some(user) => user.id,
+        None => {
+            return HttpResponse::Unauthorized().json(ApiError::from(
+                "Failed to get user data from session".to_string(),
+            ))
+        }
+    };
 
     let deleted = Car::delete(car_id, event_id, user_id, &data.db).await;
 
     match deleted {
-        Ok(Some(_)) => HttpResponse::Ok().body("Car deleted"),
-        Ok(None) => HttpResponse::NotFound().body("Car not found or you are not the driver."),
+        Ok(Some(_)) => HttpResponse::Ok().json("Car deleted"),
+        Ok(None) => HttpResponse::NotFound().json(ApiError::from(
+            "Car not found or you are not the driver.".to_string(),
+        )),
         Err(err) => {
             error!("{}", err);
-            HttpResponse::InternalServerError().body("Failed to delete car")
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to delete car".to_string()))
         }
     }
 }

@@ -1,5 +1,6 @@
 use std::{collections::HashSet, env};
 
+use anyhow::{anyhow, Result};
 use log::error;
 use redis::{aio::MultiplexedConnection, RedisResult};
 use redis_work_queue::{Item, KeyPrefix, WorkQueue};
@@ -17,20 +18,17 @@ struct RedisError {
     pub should_retry: bool,
 }
 
-pub async fn main() -> std::io::Result<()> {
-    let db = redis::Client::open(env::var("REDIS_URL").expect("REDIS_URL must be set"))
-        .unwrap()
+pub async fn main() -> Result<()> {
+    let db = redis::Client::open(env::var("REDIS_URL").expect("REDIS_URL must be set"))?
         .get_multiplexed_async_connection()
-        .await
-        .unwrap();
+        .await?;
 
     let work_queue = WorkQueue::new(KeyPrefix::from("rideboard"));
 
     let db_pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
-        .await
-        .expect("Failed to create pool");
+        .await?;
 
     let pings = PingClient::new(
         env::var("PINGS_TOKEN").expect("PINGS_TOKEN must be set"),
@@ -38,44 +36,44 @@ pub async fn main() -> std::io::Result<()> {
         env::var("PINGS_LEAVE_ROUTE").expect("PINGS_LEAVE_ROUTE must be set"),
         env::var("PINGS_ADD_ROUTE").expect("PINGS_ADD_ROUTE must be set"),
         env::var("PINGS_REMOVE_ROUTE").expect("PINGS_REMOVE_ROUTE must be set"),
-    )
-    .unwrap();
+    )?;
 
-    work_loop(db, work_queue, db_pool, pings).await.unwrap();
+    work_loop(db, work_queue, db_pool, pings).await?;
     Ok(())
 }
 
-async fn get_event_name(event_id: i32, db_pool: &Pool<Postgres>) -> String {
-    query!(r#"SELECT name FROM event WHERE id = $1"#, event_id)
+async fn get_event_name(event_id: i32, db_pool: &Pool<Postgres>) -> Result<String> {
+    match query!(r#"SELECT name FROM event WHERE id = $1"#, event_id)
         .fetch_one(db_pool)
         .await
-        .unwrap()
-        .name
+    {
+        Ok(event) => Ok(event.name),
+        Err(err) => Err(anyhow!("Failed to get event name: {}", err)),
+    }
 }
 
-async fn get_driver(car_id: i32, db_pool: &Pool<Postgres>) -> UserData {
+async fn get_driver(car_id: i32, db_pool: &Pool<Postgres>) -> Result<UserData> {
     query_as!(
         UserData,
         r#"
         SELECT users.id AS "id!", users.realm::text AS "realm!", users.name AS "name!", users.email AS "email!"
         FROM car JOIN users ON car.driver = users.id WHERE car.id = $1;
         "#, car_id
-    ).fetch_one(db_pool).await.unwrap()
+    ).fetch_one(db_pool).await.map_err(|err| anyhow!("Failed to get driver: {}", err))
 }
 
 async fn get_simple_data(
     data: SimpleRiderChange,
     db_pool: &Pool<Postgres>,
-) -> (String, UserData, UserData) {
+) -> Result<(String, UserData, UserData)> {
     let rider = UserData::select_one(data.rider_id, db_pool)
-        .await
-        .unwrap()
-        .unwrap();
-    (
-        get_event_name(data.event_id, db_pool).await,
-        get_driver(data.car_id, db_pool).await,
+        .await?
+        .ok_or(anyhow!("Rider does not exist"))?;
+    Ok((
+        get_event_name(data.event_id, db_pool).await?,
+        get_driver(data.car_id, db_pool).await?,
         rider,
-    )
+    ))
 }
 
 async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Result<(), RedisError> {
@@ -85,7 +83,13 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
     })?;
     match job_data {
         RedisJob::Join(data) => {
-            let (event_name, driver, rider) = get_simple_data(data, db_pool).await;
+            let (event_name, driver, rider) =
+                get_simple_data(data, db_pool)
+                    .await
+                    .map_err(|err| RedisError {
+                        msg: err.to_string(),
+                        should_retry: false,
+                    })?;
             if driver.realm != "csh" {
                 return Ok(());
             }
@@ -96,10 +100,19 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                     &event_name,
                 )
                 .await
-                .unwrap();
+                .map_err(|err| RedisError {
+                    msg: err.to_string(),
+                    should_retry: true,
+                })?
         }
         RedisJob::Leave(data) => {
-            let (event_name, driver, rider) = get_simple_data(data, db_pool).await;
+            let (event_name, driver, rider) =
+                get_simple_data(data, db_pool)
+                    .await
+                    .map_err(|err| RedisError {
+                        msg: err.to_string(),
+                        should_retry: false,
+                    })?;
             if driver.realm != "csh" {
                 return Ok(());
             }
@@ -110,11 +123,24 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                     &event_name,
                 )
                 .await
-                .unwrap();
+                .map_err(|err| RedisError {
+                    msg: err.to_string(),
+                    should_retry: true,
+                })?;
         }
         RedisJob::RiderUpdate(data) => {
-            let event_name = get_event_name(data.event_id, db_pool).await;
-            let driver = get_driver(data.car_id, db_pool).await;
+            let event_name = get_event_name(data.event_id, db_pool)
+                .await
+                .map_err(|err| RedisError {
+                    msg: err.to_string(),
+                    should_retry: true,
+                })?;
+            let driver = get_driver(data.car_id, db_pool)
+                .await
+                .map_err(|err| RedisError {
+                    msg: err.to_string(),
+                    should_retry: true,
+                })?;
             let old_set: HashSet<String> = HashSet::from_iter(data.old_riders);
             let new_set: HashSet<String> = HashSet::from_iter(data.new_riders);
             let user_map = UserData::select_map(
@@ -126,9 +152,15 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                 db_pool,
             )
             .await
-            .unwrap();
+            .map_err(|err| RedisError {
+                msg: err.to_string(),
+                should_retry: true,
+            })?;
             for removed in old_set.difference(&new_set) {
-                let user = user_map.get(removed).unwrap();
+                let user = user_map.get(removed).ok_or(RedisError {
+                    msg: "User was missing from map.".to_string(),
+                    should_retry: false,
+                })?;
                 if user.realm != "csh" {
                     continue;
                 }
@@ -145,7 +177,10 @@ async fn work(job: &Item, db_pool: &Pool<Postgres>, pings: &PingClient) -> Resul
                     })?;
             }
             for added in new_set.difference(&old_set) {
-                let user = user_map.get(added).unwrap();
+                let user = user_map.get(added).ok_or(RedisError {
+                    msg: "User was missing from map.".to_string(),
+                    should_retry: false,
+                })?;
                 if user.realm != "csh" {
                     continue;
                 }
@@ -174,10 +209,16 @@ pub async fn work_loop(
 ) -> RedisResult<()> {
     loop {
         // Wait for a job with no timeout and a lease time of 5 seconds.
-        let job: Item = work_queue
+        let job: Item = match work_queue
             .lease(&mut db, None, Duration::from_secs(5))
             .await?
-            .unwrap();
+        {
+            Some(job) => job,
+            None => {
+                error!("Failed to get job.");
+                continue;
+            }
+        };
         match work(&job, &db_pool, &pings).await {
             // Mark successful jobs as complete
             Ok(()) => {

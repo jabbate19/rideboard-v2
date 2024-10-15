@@ -1,7 +1,8 @@
-use crate::api::v1::auth::models::UserInfo;
 use crate::auth::SessionAuth;
+use crate::{api::v1::auth::models::UserInfo, app::ApiError};
 use actix_session::Session;
 use actix_web::{get, http::header, post, web, HttpResponse, Responder, Scope};
+use log::error;
 use utoipa::OpenApi;
 
 mod common;
@@ -11,7 +12,7 @@ pub mod models;
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 302, description = "Logged out")
     )
 )]
 #[post("/logout")]
@@ -25,13 +26,20 @@ async fn logout(session: Session) -> impl Responder {
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "List current todo items")
+        (status = 200, description = "Get current user information"),
+        (status = 500, body = ApiError)
     )
 )]
 #[get("/", wrap = "SessionAuth")]
 async fn get_user_data(session: Session) -> impl Responder {
-    let out: Option<UserInfo> = session.get("userinfo").unwrap();
-    HttpResponse::Ok().json(out)
+    match session.get::<UserInfo>("userinfo") {
+        Ok(data) => HttpResponse::Ok().json(data),
+        Err(err) => {
+            error!("{}", err);
+            HttpResponse::InternalServerError()
+                .json(ApiError::from("Failed to get Session Data".to_string()))
+        }
+    }
 }
 
 #[derive(OpenApi)]
